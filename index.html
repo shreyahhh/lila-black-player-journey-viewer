@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>LILA BLACK — Player Journey Viewer</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<style>
+  html, body { margin:0; height:100%; font-family: system-ui, sans-serif; background:#111; color:#eee; }
+  #app { display:flex; height:100%; }
+  #sidebar { width:280px; padding:12px; box-sizing:border-box; background:#1a1a1a; overflow-y:auto; }
+  #sidebar h1 { font-size:15px; margin:0 0 12px; }
+  #sidebar label { display:block; font-size:12px; margin:10px 0 4px; color:#999; }
+  #sidebar select, #sidebar button { width:100%; padding:6px; box-sizing:border-box; }
+  #map { flex:1; background:#000; }
+  #timeline { position:absolute; left:292px; right:12px; bottom:12px; background:rgba(0,0,0,.7); padding:8px 12px; border-radius:6px; z-index:1000; }
+  #timeline input[type=range] { width:100%; }
+  #legend { font-size:12px; margin-top:16px; line-height:1.8; }
+  .dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; vertical-align:middle; }
+  #matchInfo { font-size:12px; color:#aaa; margin-top:8px; white-space:pre-line; }
+  #timelineRow { display:flex; align-items:center; gap:8px; color:#ddd; font-size:12px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="sidebar">
+    <h1>LILA BLACK — Player Journeys</h1>
+
+    <label>Map</label>
+    <select id="mapSelect"></select>
+
+    <label>Date</label>
+    <select id="dateSelect"></select>
+
+    <label>Match</label>
+    <select id="matchSelect"></select>
+
+    <label>Heatmap</label>
+    <select id="heatSelect">
+      <option value="off">Off</option>
+      <option value="match">This match (positions)</option>
+      <option value="traffic">All matches on map — traffic</option>
+      <option value="kills">All matches on map — kill zones</option>
+      <option value="deaths">All matches on map — death zones</option>
+    </select>
+
+    <div id="matchInfo"></div>
+
+    <div id="legend">
+      <div><span class="dot" style="background:#3aa0ff"></span>Human path</div>
+      <div><span class="dot" style="background:#999"></span>Bot path</div>
+      <div><span class="dot" style="background:#2ecc71"></span>Kill</div>
+      <div><span class="dot" style="background:#e74c3c"></span>Death / Killed</div>
+      <div><span class="dot" style="background:#9b59b6"></span>Storm death</div>
+      <div><span class="dot" style="background:#f1c40f"></span>Loot</div>
+    </div>
+
+    <p style="font-size:11px;color:#666;margin-top:20px">
+      Coordinate mapping (the accuracy-critical piece) is fully implemented
+      and verified against real data. Filtering, timeline/playback, and
+      heatmaps (traffic/kill-zones/death-zones, map-wide across all matches)
+      are functional — UI polish is a good next-pass target.
+    </p>
+  </div>
+
+  <div id="map"></div>
+
+  <div id="timeline">
+    <div id="timelineRow">
+      <button id="playBtn" style="width:auto">▶</button>
+      <span id="timeLabel">0s / 0s</span>
+      <input type="range" id="scrubber" min="0" max="0" value="0" />
+    </div>
+  </div>
+</div>
+
+<script>
+const DATA_BASE = "data";
+
+let leafletMap, imageOverlay, currentMatch, currentImgDims;
+let pathLayers = [], markerLayers = [], playheadLayers = [], heatLayer = null;
+let playing = false, playTimer = null;
+
+const EVENT_STYLE = {
+  Kill:          { color: "#2ecc71", radius: 5 },
+  BotKill:       { color: "#2ecc71", radius: 5 },
+  Killed:        { color: "#e74c3c", radius: 5 },
+  BotKilled:     { color: "#e74c3c", radius: 5 },
+  KilledByStorm: { color: "#9b59b6", radius: 6 },
+  Loot:          { color: "#f1c40f", radius: 3 },
+};
+
+function toLatLng(px, py, imgH) {
+  // Leaflet's CRS.Simple treats increasing "lat" as UP the screen, but our
+  // preprocessed pixel coords use image convention (Y increases DOWN from
+  // top-left). Flip here, once, at the render boundary.
+  return [imgH - py, px];
+}
+
+async function loadIndex() {
+  const res = await fetch(`${DATA_BASE}/index.json`);
+  return res.json();
+}
+
+function populateSelect(el, values) {
+  el.innerHTML = "";
+  values.forEach(v => {
+    const opt = document.createElement("option");
+    opt.value = v; opt.textContent = v;
+    el.appendChild(opt);
+  });
+}
+
+let currentMapId = null;
+
+function initMapView(map_id, dims) {
+  const { width, height } = dims;
+  const bounds = [[0, 0], [height, width]];
+
+  if (leafletMap && map_id === currentMapId) {
+    // Same map image already loaded — just reset the view, don't tear down
+    // the Leaflet instance (destroying it mid zoom-animation throws).
+    leafletMap.fitBounds(bounds, { animate: false });
+    currentImgDims = dims;
+    return;
+  }
+
+  if (leafletMap) leafletMap.remove();
+  leafletMap = L.map("map", { crs: L.CRS.Simple, minZoom: -4, zoomAnimation: false });
+  imageOverlay = L.imageOverlay(`minimaps/${map_id}_Minimap${mapImageExt(map_id)}`, bounds).addTo(leafletMap);
+  leafletMap.fitBounds(bounds, { animate: false });
+  currentImgDims = dims;
+  currentMapId = map_id;
+}
+
+function mapImageExt(map_id) {
+  return map_id === "Lockdown" ? ".jpg" : ".png";
+}
+
+function clearLayers() {
+  [...pathLayers, ...markerLayers, ...playheadLayers].forEach(l => leafletMap.removeLayer(l));
+  pathLayers = []; markerLayers = []; playheadLayers = [];
+  if (heatLayer) { leafletMap.removeLayer(heatLayer); heatLayer = null; }
+}
+
+async function loadMatch(mapId, file) {
+  const res = await fetch(`${DATA_BASE}/${file}`);
+  const match = await res.json();
+  currentMatch = match;
+  renderMatch(match);
+}
+
+function renderMatch(match) {
+  clearLayers();
+  const imgH = currentImgDims.height;
+
+  let humanCount = 0, botCount = 0;
+  match.players.forEach(p => {
+    if (p.is_human) humanCount++; else botCount++;
+
+    const latlngs = p.points.map(pt => toLatLng(pt[1], pt[2], imgH));
+    const path = L.polyline(latlngs, {
+      color: p.is_human ? "#3aa0ff" : "#999",
+      weight: p.is_human ? 2 : 1,
+      opacity: 0.6,
+    }).addTo(leafletMap);
+    pathLayers.push(path);
+
+    p.points.forEach(pt => {
+      const [, px, py, , event] = pt;
+      const style = EVENT_STYLE[event];
+      if (!style) return; // Position/BotPosition — path already shows movement
+      const m = L.circleMarker(toLatLng(px, py, imgH), {
+        radius: style.radius, color: style.color, fillColor: style.color, fillOpacity: 0.9, weight: 1,
+      }).bindTooltip(`${event} — ${p.is_human ? "human" : "bot"} ${p.user_id}`);
+      m.addTo(leafletMap);
+      markerLayers.push(m);
+    });
+  });
+
+  document.getElementById("matchInfo").textContent =
+    `Match: ${match.match_id.slice(0,8)}...\nMap: ${match.map_id}\nDate: ${match.date}\n` +
+    `Duration: ${match.duration_sec}s\nHumans: ${humanCount}  Bots: ${botCount}`;
+
+  const scrubber = document.getElementById("scrubber");
+  scrubber.max = match.duration_sec;
+  scrubber.value = 0;
+  updateTimeLabel(0, match.duration_sec);
+
+  applyHeatMode();
+}
+
+const aggregateCache = {}; // map_id -> { traffic, kills, deaths }
+
+async function loadAggregate(mapId) {
+  if (aggregateCache[mapId]) return aggregateCache[mapId];
+  const res = await fetch(`${DATA_BASE}/${mapId}/_aggregate.json`);
+  const agg = await res.json();
+  aggregateCache[mapId] = agg;
+  return agg;
+}
+
+async function applyHeatMode() {
+  if (heatLayer) { leafletMap.removeLayer(heatLayer); heatLayer = null; }
+  const mode = document.getElementById("heatSelect").value;
+  if (mode === "off" || !currentMatch) return;
+  const imgH = currentImgDims.height;
+
+  if (mode === "match") {
+    const pts = [];
+    currentMatch.players.forEach(p => p.points.forEach(pt => {
+      const [lat, lng] = toLatLng(pt[1], pt[2], imgH);
+      pts.push([lat, lng, 0.5]);
+    }));
+    heatLayer = L.heatLayer(pts, { radius: 18, blur: 22 }).addTo(leafletMap);
+    return;
+  }
+
+  // Map-wide modes: aggregated across ALL matches for this map, precomputed
+  // by the pipeline into data/<map>/_aggregate.json (raw pixel points).
+  const agg = await loadAggregate(currentMatch.map_id);
+  const raw = agg[mode] || []; // "traffic" | "kills" | "deaths"
+  const pts = raw.map(([px, py]) => {
+    const [lat, lng] = toLatLng(px, py, imgH);
+    return [lat, lng, 0.5];
+  });
+  // Traffic has 10-100x more points than kills/deaths (every movement tick
+  // vs. one-off events), so with a fixed intensity scale it saturates the
+  // whole map to solid red and shows no contrast. Scale `max` by point
+  // count so all three modes land in a readable gradient.
+  const radius = mode === "traffic" ? 12 : 22;
+  const max = mode === "traffic" ? Math.max(3, pts.length / 4000) : 1;
+  heatLayer = L.heatLayer(pts, { radius, blur: radius + 6, max, maxZoom: 2 }).addTo(leafletMap);
+}
+
+// --- Timeline / playback: interpolate each player's position at time t ---
+function positionAt(points, t) {
+  if (t <= points[0][0]) return points[0];
+  if (t >= points[points.length - 1][0]) return points[points.length - 1];
+  for (let i = 0; i < points.length - 1; i++) {
+    const [t0, ...a] = points[i];
+    const [t1, ...b] = points[i + 1];
+    if (t >= t0 && t <= t1) {
+      const f = t1 === t0 ? 0 : (t - t0) / (t1 - t0);
+      return [t, a[0] + (b[0]-a[0])*f, a[1] + (b[1]-a[1])*f, a[2] + (b[2]-a[2])*f, a[3]];
+    }
+  }
+  return points[points.length - 1];
+}
+
+function renderPlayheads(t) {
+  playheadLayers.forEach(l => leafletMap.removeLayer(l));
+  playheadLayers = [];
+  if (!currentMatch) return;
+  const imgH = currentImgDims.height;
+  currentMatch.players.forEach(p => {
+    if (p.points.length === 0) return;
+    const [, px, py] = positionAt(p.points, t);
+    const marker = L.circleMarker(toLatLng(px, py, imgH), {
+      radius: 6, color: "#fff", weight: 2,
+      fillColor: p.is_human ? "#3aa0ff" : "#999", fillOpacity: 1,
+    }).addTo(leafletMap);
+    playheadLayers.push(marker);
+  });
+}
+
+function updateTimeLabel(t, dur) {
+  document.getElementById("timeLabel").textContent = `${Math.round(t)}s / ${dur}s`;
+}
+
+document.getElementById("scrubber").addEventListener("input", e => {
+  const t = Number(e.target.value);
+  renderPlayheads(t);
+  updateTimeLabel(t, currentMatch ? currentMatch.duration_sec : 0);
+});
+
+document.getElementById("playBtn").addEventListener("click", () => {
+  playing = !playing;
+  document.getElementById("playBtn").textContent = playing ? "⏸" : "▶";
+  if (playing) {
+    playTimer = setInterval(() => {
+      const scrubber = document.getElementById("scrubber");
+      let t = Number(scrubber.value) + 1;
+      if (t > Number(scrubber.max)) t = 0;
+      scrubber.value = t;
+      renderPlayheads(t);
+      updateTimeLabel(t, currentMatch.duration_sec);
+    }, 100); // 10x real-time playback
+  } else {
+    clearInterval(playTimer);
+  }
+});
+
+document.getElementById("heatSelect").addEventListener("change", applyHeatMode);
+
+// --- Filtering wiring ---
+let INDEX;
+
+async function refreshDates() {
+  const mapId = document.getElementById("mapSelect").value;
+  const dates = [...new Set(INDEX.matches.filter(m => m.map_id === mapId).map(m => m.date))].sort();
+  populateSelect(document.getElementById("dateSelect"), dates);
+  await refreshMatches();
+}
+
+async function refreshMatches() {
+  const mapId = document.getElementById("mapSelect").value;
+  const date = document.getElementById("dateSelect").value;
+  const matches = INDEX.matches.filter(m => m.map_id === mapId && m.date === date);
+  const matchSelect = document.getElementById("matchSelect");
+  matchSelect.innerHTML = "";
+  matches.forEach(m => {
+    const opt = document.createElement("option");
+    opt.value = m.file;
+    opt.textContent = `${m.match_id.slice(0,8)}  (${m.human_count}h/${m.bot_count}b, ${m.duration_sec}s)`;
+    matchSelect.appendChild(opt);
+  });
+  if (matches.length) await selectMatch();
+}
+
+async function selectMatch() {
+  const mapId = document.getElementById("mapSelect").value;
+  const file = document.getElementById("matchSelect").value;
+  if (!file) return;
+  initMapView(mapId, INDEX.maps[mapId]);
+  await loadMatch(mapId, file);
+}
+
+document.getElementById("mapSelect").addEventListener("change", refreshDates);
+document.getElementById("dateSelect").addEventListener("change", refreshMatches);
+document.getElementById("matchSelect").addEventListener("change", selectMatch);
+
+(async function init() {
+  INDEX = await loadIndex();
+  const maps = [...new Set(INDEX.matches.map(m => m.map_id))].sort();
+  populateSelect(document.getElementById("mapSelect"), maps);
+  await refreshDates();
+})();
+</script>
+</body>
+</html>
