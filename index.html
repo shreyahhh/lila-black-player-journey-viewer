@@ -3,8 +3,11 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>LILA BLACK — Player Journey Viewer</title>
+<title>XCoordinated · LILA BLACK Player Journey Viewer</title>
 <link rel="icon" type="image/png" href="assets/favicon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
 <style>
   :root {
     --bg: #0d0f12;
@@ -13,14 +16,14 @@
     --text: #e7ebee;
     --text-dim: #8b96a3;
     --text-faint: #5a6472;
-    --human: #4da3ff;
+    --accent: #137E6D;
     --green: #34d399;
     --red: #f87171;
     --purple: #a78bfa;
     --yellow: #fbbf24;
   }
   * { box-sizing: border-box; }
-  html, body { margin:0; min-height:100%; font-family: -apple-system, "Segoe UI", system-ui, sans-serif; background:var(--bg); color:var(--text); }
+  html, body { margin:0; min-height:100%; font-family:'Inter', -apple-system, "Segoe UI", system-ui, sans-serif; background:var(--bg); color:var(--text); }
 
   #hero {
     position:relative; min-height:100vh; display:flex; flex-direction:column;
@@ -28,35 +31,82 @@
     background:var(--bg); overflow:hidden;
   }
 
-  /* Map as a corner accent graphic, not a full-bleed backdrop. The source
-     image already fades to black in its own corners (the minimap art sits
-     on a black canvas), so no extra gradient mask is needed here — it just
-     doubled up the black and looked like a hard box before. */
+  /* Faint lat/long-style graticule, on-theme with "coordinates" — a grid of
+     lines plus a handful of decorative coordinate ticks along the edges,
+     faded out toward the corners so it reads as texture, not a chart. */
+  #gridLines {
+    position:absolute; inset:0; z-index:0; pointer-events:none;
+    background-image:
+      linear-gradient(rgba(231,235,238,.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(231,235,238,.06) 1px, transparent 1px);
+    background-size:64px 64px;
+    -webkit-mask-image: radial-gradient(ellipse at 35% 45%, rgba(0,0,0,1) 0%, rgba(0,0,0,.5) 55%, rgba(0,0,0,0) 90%);
+    mask-image: radial-gradient(ellipse at 35% 45%, rgba(0,0,0,1) 0%, rgba(0,0,0,.5) 55%, rgba(0,0,0,0) 90%);
+  }
+  .geo-tick {
+    position:absolute; font-family:ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size:10px; letter-spacing:.03em; color:var(--text-faint); opacity:.6; z-index:0;
+  }
+  .geo-tick.lat { left:14px; }
+  .geo-tick.lon { bottom:10px; writing-mode:horizontal-tb; }
+
+  /* Map as a corner accent graphic, not a full-bleed backdrop. The PNG has a
+     transparent background around the island shape, so it's faded out with a
+     mask (rather than relying on the source image, like the old JPG did) and
+     tilted slightly so it reads as a background accent, not a pasted-on box. */
   #mapCorner {
-    position:absolute; top:0; right:0; width:min(58vw, 900px); aspect-ratio:1/1;
-    background: url("assets/hero-bg.jpg") top right / cover no-repeat;
+    position:absolute; top:-40px; right:-40px; width:min(34vw, 480px); aspect-ratio:495/504;
+    background: url("assets/hero-bg.png") center / contain no-repeat;
+    transform: rotate(8deg);
+    opacity:.55;
+    -webkit-mask-image: radial-gradient(circle at 65% 35%, rgba(0,0,0,1) 60%, rgba(0,0,0,0) 92%);
+    mask-image: radial-gradient(circle at 65% 35%, rgba(0,0,0,1) 60%, rgba(0,0,0,0) 92%);
     z-index:0; pointer-events:none;
   }
 
-  nav { position:absolute; top:28px; left:0; right:0; display:flex; align-items:center; justify-content:center; gap:10px; z-index:2; }
-  nav img { width:24px; height:24px; }
-  nav span { font-size:12px; font-weight:600; letter-spacing:.1em; color:var(--text-dim); text-transform:uppercase; }
+  nav { position:absolute; top:24px; left:32px; display:flex; align-items:center; gap:12px; z-index:2; }
+  nav img { width:44px; height:44px; }
+  nav span { font-family:'Saira Condensed', sans-serif; font-weight:800; font-size:23px; letter-spacing:.01em; color:var(--text); }
 
-  #content { position:relative; z-index:2; max-width:620px; display:flex; flex-direction:column; align-items:center; }
-  .eyebrow { font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--human); margin:0 0 16px; font-weight:600; }
-  h1 { font-size:clamp(32px, 4.2vw, 48px); line-height:1.15; margin:0 0 18px; font-weight:700; letter-spacing:-.015em; }
-  .subtitle { font-size:16px; color:var(--text-dim); line-height:1.7; margin:0 0 32px; max-width:520px; }
+  #content { position:relative; z-index:2; max-width:640px; display:flex; flex-direction:column; align-items:center; }
+  .eyebrow { font-size:12px; letter-spacing:.16em; text-transform:uppercase; color:var(--accent); margin:0 0 18px; font-weight:600; }
+  h1 {
+    font-family:'Saira Condensed', sans-serif;
+    font-weight:900;
+    font-size:clamp(42px, 5.6vw, 64px); line-height:1.05; margin:0 0 20px;
+    letter-spacing:.005em;
+  }
+  .subtitle { font-size:17px; font-weight:400; color:var(--text-dim); line-height:1.65; margin:0 0 34px; max-width:460px; }
+  .subtitle strong { color:var(--text); font-weight:600; }
+  h1 .accent { color:var(--accent); }
 
   .cta-row { display:flex; align-items:center; justify-content:center; }
   .btn-primary {
+    position:relative; overflow:hidden;
     display:inline-flex; align-items:center; gap:9px;
-    background:var(--text); color:#0d0f12; font-size:15px; font-weight:600;
+    background:var(--accent); color:var(--text); font-family:'Inter', sans-serif; font-size:15px; font-weight:600;
     padding:14px 26px; border-radius:8px; text-decoration:none; white-space:nowrap;
     box-shadow:0 10px 30px rgba(0,0,0,.4);
+    transition:background .15s ease, transform .15s ease;
   }
-  .btn-primary:hover { background:#fff; }
-  .btn-primary svg { transition:transform .15s ease; }
+  .btn-primary:hover { background:#6bab95; }
+  .btn-primary:active { transform:scale(.97); }
+  .btn-primary svg { transition:transform .15s ease; position:relative; z-index:1; }
   .btn-primary:hover svg { transform:translateX(3px); }
+
+  /* Press ripple, ported from motion.dev's Material Design ripple example:
+     a circle sized to reach the button's farthest corner from the click
+     point, centered on it, expanding from scale(0) while fading out. */
+  .btn-primary span.label { position:relative; z-index:1; }
+  .ripple {
+    position:absolute; border-radius:50%; background:rgba(255,255,255,.35);
+    transform:scale(0); opacity:.55; pointer-events:none;
+    animation:ripple-expand .6s cubic-bezier(.4,0,.2,1) forwards;
+  }
+  @keyframes ripple-expand { to { transform:scale(1); opacity:0; } }
+  @media (prefers-reduced-motion: reduce) {
+    .ripple { display:none; }
+  }
 
   footer.stats { position:relative; z-index:2; font-size:12px; color:var(--text-faint); margin-top:36px; }
 
@@ -68,24 +118,27 @@
     background:rgba(20,24,29,.5); transition:background .15s ease, color .15s ease, border-color .15s ease;
   }
   .docs-link svg { width:18px; height:18px; }
-  .docs-link:hover { color:var(--text); border-color:var(--text-dim); background:rgba(20,24,29,.8); }
+  .docs-link:hover { color:var(--accent); border-color:var(--accent); background:rgba(20,24,29,.8); }
 
-  /* ---------- Intro: pixel curtain reveal ---------- */
-  /* Inspired by motion.dev's "Curtains: Pixels" transition — a grid of blocks
-     that dissolve away in a directional wipe with randomized per-block jitter,
-     rather than a uniform wipe. Built here in plain CSS/JS (that example's
-     exact source is a locked Motion+ example). */
-  #curtain {
-    position:absolute; top:0; left:0; width:100%; z-index:100; display:grid; pointer-events:none;
+  /* ---------- Intro: staggered slide-up reveal ---------- */
+  /* Each piece of the hero content rises and fades in on its own, in
+     sequence (eyebrow, heading, subtitle, CTA, stats). */
+  #content > * {
+    opacity:0; transform:translateY(24px);
+    transition:opacity .6s ease, transform .6s cubic-bezier(.16,1,.3,1);
   }
-  #curtain .cell { background:#000; opacity:1; }
-
-  body > #hero { opacity:0; }
-  body > #hero.reveal { opacity:1; transition:opacity .3s ease; }
+  #content.in > * { opacity:1; transform:translateY(0); }
+  #content.in > *:nth-child(1) { transition-delay:.05s; }
+  #content.in > *:nth-child(2) { transition-delay:.15s; }
+  #content.in > *:nth-child(3) { transition-delay:.32s; }
+  #content.in > *:nth-child(4) { transition-delay:.44s; }
+  #content.in > *:nth-child(5) { transition-delay:.54s; }
+  /* Used when returning to an already-revealed page this session (see JS) —
+     content should just be there, with no re-animation. */
+  #content.no-anim > * { transition:none !important; }
 
   @media (prefers-reduced-motion: reduce) {
-    #curtain { display:none; }
-    #hero { opacity:1; }
+    #content > * { transition:none; transform:none; opacity:1; }
   }
 
   @media (max-width: 600px) {
@@ -94,13 +147,18 @@
 </style>
 </head>
 <body>
-<div id="curtain"></div>
-
 <div id="hero">
+  <div id="gridLines"></div>
+  <span class="geo-tick lat" style="top:18%">44.6031° N</span>
+  <span class="geo-tick lat" style="top:42%">44.2650° N</span>
+  <span class="geo-tick lat" style="top:66%">43.9270° N</span>
+  <span class="geo-tick lon" style="left:22%">73.6180° W</span>
+  <span class="geo-tick lon" style="left:52%">73.2810° W</span>
+  <span class="geo-tick lon" style="left:80%">72.9440° W</span>
   <div id="mapCorner"></div>
   <nav>
-    <img src="assets/lila-logo.png" alt="LILA Games" />
-    <span>LILA Games · LILA BLACK</span>
+    <img src="assets/lila-logo.png?v=2" alt="LILA Games" />
+    <span>XCoordinated</span>
   </nav>
   <a class="docs-link" href="docs.html" title="Documentation" aria-label="Documentation">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -114,85 +172,78 @@
 
   <div id="content">
     <div class="eyebrow">Level Design Tooling</div>
-    <h1>See exactly how players move, fight, and die on your maps</h1>
-    <p class="subtitle">A browser-based tool that turns raw match telemetry into player paths, event markers, live playback, and kill/death heatmaps — mapped pixel-accurately onto the real minimaps.</p>
+    <h1>Every fight. Every death.<br>Every path. <span class="accent">Coordinated.</span></h1>
+    <p class="subtitle">Real <strong>LILA BLACK</strong> match data, turned into player paths, live playback, and kill/death heatmaps.</p>
 
     <div class="cta-row">
-      <a class="btn-primary" href="viewer.html">
-        Open the Map Viewer
+      <a class="btn-primary" href="viewer.html" id="ctaBtn">
+        <span class="label">Explore the Map</span>
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
       </a>
     </div>
 
-    <footer class="stats">3 maps · 796 matches · 89,104 events · Feb 10–14, 2026</footer>
+    <footer class="stats">3 maps · 796 matches · 89,104 events</footer>
   </div>
 </div>
 
 <script>
-  // Faithful port of motion.dev's "Curtains: Pixels" reveal algorithm.
-  // Extracted from their shipped source (assets/use-curtains-*.js, function `ne`/
-  // its helper `Gt`) since the formatted example source is a locked Motion+
-  // feature — the shipped, executable JS is not. Ported from Motion's
-  // animate()/WAAPI calls to plain CSS transitions so this page has no
-  // framework dependency. Same math: each tile's reveal delay is a blend of
-  // (a) its position projected onto an `angle` direction, normalized 0-1
-  // across the grid, and (b) pure per-tile randomness, mixed by `noise`
-  // (0 = clean directional wipe, 1 = fully random per-tile).
-  (function pixelCurtainReveal({ size = 100, angle = 90, noise = 0.4, duration = 0.5, maxDelayFraction = 0.4 } = {}) {
-    const curtain = document.getElementById('curtain');
-    // Cover the FULL page, not just the first viewport — the hero can be
-    // taller than 100vh on smaller/narrower screens, and a fixed-viewport
-    // overlay would leave the rest of the page unmasked underneath it.
-    const vw = document.documentElement.scrollWidth;
-    const vh = document.documentElement.scrollHeight;
-    curtain.style.height = `${vh}px`;
-    const cols = Math.max(1, Math.ceil(vw / size));
-    const rows = Math.max(1, Math.ceil(vh / size));
-    curtain.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-    curtain.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+  // Intro: the hero content (eyebrow, heading, subtitle, CTA, stats) rises
+  // and fades in, staggered — see the #content CSS above for the timing.
+  (function contentReveal() {
+    const content = document.getElementById('content');
 
-    const tiles = [];
-    for (let i = 0; i < rows * cols; i++) {
-      const cell = document.createElement('div');
-      cell.className = 'cell';
-      curtain.appendChild(cell);
-      tiles.push(cell);
+    // Skip the reveal only when arriving via an in-app link click (e.g. the
+    // viewer's "Home" link) and it's already played once this session — a
+    // reload of the page, soft or hard, should always replay it. The
+    // Navigation Timing API reports both F5 and Ctrl+Shift+R as "reload",
+    // distinct from "navigate" (a normal link/URL navigation).
+    let isReload = false;
+    if (performance.getEntriesByType) {
+      const nav = performance.getEntriesByType('navigation')[0];
+      if (nav) isReload = nav.type === 'reload';
+    } else if (performance.navigation) {
+      isReload = performance.navigation.type === performance.navigation.TYPE_RELOAD;
     }
-
-    // --- Gt(): per-tile value = normalized directional projection, blended with noise ---
-    const rad = angle * Math.PI / 180, cosA = Math.cos(rad), sinA = Math.sin(rad);
-    const dw = vw / cols, dh = vh / rows;
-    const raw = new Array(tiles.length);
-    let min = Infinity, max = -Infinity;
-    for (let i = 0; i < tiles.length; i++) {
-      const col = i % cols, row = Math.floor(i / cols);
-      const cx = (col + 0.5) * dw, cy = (row + 0.5) * dh;
-      const t = cx * cosA + cy * sinA;
-      raw[i] = t;
-      if (t < min) min = t;
-      if (t > max) max = t;
+    if (!isReload && sessionStorage.getItem('xcoordinatedIntroPlayed')) {
+      content.classList.add('no-anim', 'in');
+      return;
     }
-    const range = (max - min) || 1;
-    const g = Math.min(1, Math.max(0, noise));
-    const delays = raw.map(t => {
-      const s = (t - min) / range;
-      return s * (1 - g) + Math.random() * g; // Gt()'s exact blend formula
-    });
+    sessionStorage.setItem('xcoordinatedIntroPlayed', '1');
 
-    tiles.forEach((cell, i) => {
-      cell.style.transition = `opacity ${duration}s cubic-bezier(.76,0,.24,1) ${delays[i] * maxDelayFraction}s`;
-    });
-
-    document.getElementById('hero').classList.add('reveal');
-
-    // Two rAFs: let the transition property commit before flipping opacity,
-    // otherwise the browser can coalesce it into the initial paint (no animation).
+    // Two rAFs: let the transition property commit before flipping the
+    // class, otherwise the browser can coalesce it into the initial paint.
     requestAnimationFrame(() => requestAnimationFrame(() => {
-      tiles.forEach(cell => { cell.style.opacity = '0'; });
+      content.classList.add('in');
     }));
+  })();
 
-    const totalMs = (maxDelayFraction + duration) * 1000;
-    setTimeout(() => { curtain.remove(); }, totalMs + 50);
+  // Press ripple for the primary CTA, ported from motion.dev's Material
+  // Design ripple example: a circle sized to reach the button's farthest
+  // corner from the click point, centered on it, expanding while fading out.
+  (function ctaRipple() {
+    const btn = document.getElementById('ctaBtn');
+    if (!btn) return;
+    function spawnRipple(x, y) {
+      const rect = btn.getBoundingClientRect();
+      const cx = x - rect.left, cy = y - rect.top;
+      const r = Math.max(
+        Math.hypot(cx, cy), Math.hypot(rect.width - cx, cy),
+        Math.hypot(cx, rect.height - cy), Math.hypot(rect.width - cx, rect.height - cy)
+      );
+      const span = document.createElement('span');
+      span.className = 'ripple';
+      span.style.width = span.style.height = `${r * 2}px`;
+      span.style.left = `${cx - r}px`;
+      span.style.top = `${cy - r}px`;
+      btn.appendChild(span);
+      span.addEventListener('animationend', () => span.remove());
+    }
+    btn.addEventListener('pointerdown', e => spawnRipple(e.clientX, e.clientY));
+    btn.addEventListener('click', e => {
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return; // let modified clicks open normally
+      e.preventDefault();
+      setTimeout(() => { window.location.href = btn.getAttribute('href'); }, 280);
+    });
   })();
 </script>
 </body>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Documentation — LILA BLACK Player Journey Viewer</title>
+<title>Documentation · XCoordinated</title>
 <link rel="icon" type="image/png" href="assets/favicon.png" />
 <style>
   :root {
@@ -84,7 +84,8 @@
   /* ---------- Main content ---------- */
   main { flex:1; min-width:0; padding:36px 28px 80px; }
   section { margin-bottom:56px; scroll-margin-top:76px; }
-  section h2 { font-size:22px; margin:0 0 12px; }
+  section h2 { font-size:22px; margin:0 0 4px; }
+  section > p.kicker { color:var(--text-faint); font-size:12px; text-transform:uppercase; letter-spacing:.08em; font-weight:600; margin:0 0 14px; }
   section > p.lead { color:var(--text-dim); font-size:15px; line-height:1.7; max-width:680px; }
 
   .card-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:18px; }
@@ -116,7 +117,7 @@
 </head>
 <body>
 <div id="topbar">
-  <a class="brand" href="index.html"><img src="assets/lila-logo.png" alt="" /> LILA BLACK Docs</a>
+  <a class="brand" href="index.html"><img src="assets/lila-logo.png?v=2" alt="" /> XCoordinated Docs</a>
   <div class="links">
     <a href="index.html">Home</a>
     <a href="viewer.html">Open Viewer</a>
@@ -128,7 +129,7 @@
   <aside id="docSidebar">
     <div class="profile-card">
       <p class="name">Shreya</p>
-      <p class="role">Built for LILA Games — Product Engineer take-home</p>
+      <p class="role">Built for LILA Games · Product Engineer take-home</p>
       <div class="social">
         <a href="https://github.com/shreyahhh" target="_blank" rel="noopener" title="GitHub">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.84 9.73.5.1.68-.22.68-.49 0-.24-.01-.87-.01-1.71-2.78.62-3.37-1.37-3.37-1.37-.45-1.18-1.11-1.5-1.11-1.5-.91-.64.07-.63.07-.63 1 .07 1.53 1.06 1.53 1.06.89 1.56 2.34 1.11 2.91.85.09-.66.35-1.11.63-1.37-2.22-.26-4.56-1.14-4.56-5.07 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.31.1-2.72 0 0 .84-.27 2.75 1.05a9.3 9.3 0 0 1 5 0c1.91-1.32 2.75-1.05 2.75-1.05.55 1.41.2 2.46.1 2.72.64.72 1.03 1.63 1.03 2.75 0 3.94-2.34 4.8-4.57 5.06.36.32.68.94.68 1.9 0 1.37-.01 2.47-.01 2.81 0 .27.18.6.69.49A10.26 10.26 0 0 0 22 12.25C22 6.58 17.52 2 12 2z"/></svg>
@@ -181,23 +182,24 @@
 
   <main>
     <section id="overview">
-      <h2>LILA BLACK — Player Journey Viewer</h2>
-      <p class="lead">A browser-based tool for the Level Design team to explore how players actually move, fight, loot, and die across LILA BLACK's three maps — built from 5 days of real production telemetry (796 matches, 89,104 events).</p>
+      <h2>XCoordinated</h2>
+      <p class="kicker">LILA BLACK Player Journey Viewer</p>
+      <p class="lead">A browser-based tool for the Level Design team to explore how players actually move, fight, loot, and die across LILA BLACK's three maps, built from 5 days of real production telemetry (796 matches, 89,104 events).</p>
       <div class="card-grid">
         <div class="info-card">
-          <h3>📦 The dataset</h3>
+          <h3><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4a2 2 0 0 0 1-1.73Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg> The dataset</h3>
           <p>1,243 Parquet files · 3 maps (AmbroseValley, GrandRift, Lockdown) · Feb 10–14 2026 · human &amp; bot players.</p>
         </div>
         <div class="info-card">
-          <h3>🎯 The goal</h3>
-          <p>Turn raw telemetry into something a Level Designer can open and use — no queries, no notebooks.</p>
+          <h3><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg> The goal</h3>
+          <p>Turn raw telemetry into something a Level Designer can open and use: no queries, no notebooks.</p>
         </div>
       </div>
     </section>
 
     <section id="tech-stack">
       <h2>Tech Stack</h2>
-      <p class="lead">No framework, no build step — a static site is the whole product.</p>
+      <p class="lead">No framework, no build step: a static site is the whole product.</p>
       <table>
         <tr><th>Layer</th><th>Choice</th><th>Why</th></tr>
         <tr><td><strong>Data parsing</strong></td><td><code>pyarrow</code></td><td>Native Parquet reader, no pandas overhead for a single pass per file</td></tr>
@@ -218,14 +220,14 @@ pixel_x = u * image_width
 pixel_y = (1 - v) * image_height   // Y flip: world Z vs. image top-left origin</pre>
       <ul class="check-list">
         <li>100% of transformed points land inside image bounds, across all 89,104 rows and all 3 maps</li>
-        <li>Minimaps are <strong>not</strong> 1024×1024 as documented — real sizes read at runtime instead (4320×4320, 9000×9000, and a non-square 2160×2158)</li>
+        <li>Minimaps are <strong>not</strong> 1024×1024 as documented; real sizes read at runtime instead (4320×4320, 9000×9000, and a non-square 2160×2158)</li>
         <li>Visually validated: paths trace roads and hug buildings correctly on every map</li>
       </ul>
     </section>
 
     <section id="data-pipeline">
       <h2>Data Pipeline</h2>
-      <p class="lead">Everything risky happens once, offline, in Python — the browser only ever sees plain pixel coordinates and JSON.</p>
+      <p class="lead">Everything risky happens once, offline, in Python: the browser only ever sees plain pixel coordinates and JSON.</p>
       <pre>1,243 Parquet files (89,104 rows, 796 matches, 3 maps, 5 days)
         │  pipeline/preprocess.py
         ▼
@@ -233,32 +235,32 @@ pixel_y = (1 - v) * image_height   // Y flip: world Z vs. image top-left origin<
         │  viewer.html (fetch)
         ▼
 Rendered in-browser: paths, event markers, heatmaps, playback</pre>
-      <div class="callout">Also found: the <code>ts</code> column is typed <code>timestamp[ms]</code> but the raw values are actually Unix-epoch <strong>seconds</strong> — decoding as milliseconds gives a nonsense 1970 date, while seconds land on real dates inside the dataset's actual Feb 2026 window. See <a href="ARCHITECTURE.md">ARCHITECTURE.md</a> for the full list of data nuances found.</div>
+      <div class="callout">Also found: the <code>ts</code> column is typed <code>timestamp[ms]</code> but the raw values are actually Unix-epoch <strong>seconds</strong>. Decoding as milliseconds gives a nonsense 1970 date, while seconds land on real dates inside the dataset's actual Feb 2026 window. See <a href="ARCHITECTURE.md">ARCHITECTURE.md</a> for the full list of data nuances found.</div>
     </section>
 
     <section id="product-decisions">
       <h2>Product Decisions</h2>
       <p class="lead">Why the tool behaves the way it does.</p>
       <ul class="check-list">
-        <li>Match dropdown sorted by player count — surfaces the busiest, most likely-interesting matches first</li>
-        <li>Heatmap defaults to "off" — a heatmap over a path-covered map is noisy as a default view</li>
-        <li>Map-wide heatmaps are precomputed at build time, not fetched live — a single match has too few kill/death events to show a real pattern</li>
-        <li>Playback defaults to 2x — matches run up to ~15 minutes; real-time is tedious for a first look</li>
+        <li>Match dropdown sorted by player count: surfaces the busiest, most likely-interesting matches first</li>
+        <li>Heatmap defaults to "off": a heatmap over a path-covered map is noisy as a default view</li>
+        <li>Map-wide heatmaps are precomputed at build time, not fetched live: a single match has too few kill/death events to show a real pattern</li>
+        <li>Playback defaults to 2x: matches run up to ~15 minutes; real-time is tedious for a first look</li>
       </ul>
     </section>
 
     <section id="insights">
       <h2>Data Insights</h2>
-      <p class="lead">Three things the data revealed, each backed by a real stat — full writeup in <a href="INSIGHTS.md">INSIGHTS.md</a>.</p>
+      <p class="lead">Three things the data revealed, each backed by a real stat. Full writeup in <a href="INSIGHTS.md">INSIGHTS.md</a>.</p>
       <div class="card-grid">
-        <div class="info-card"><h3>🗺️ Map rotation is skewed</h3><p>AmbroseValley: 71% of matches. GrandRift: just 7% — an order of magnitude less playtesting signal than the other maps.</p></div>
-        <div class="info-card"><h3>⚔️ PvP is nearly absent</h3><p>Human-vs-human kills are ~0.1% of all combat events — almost all fighting is against bots.</p></div>
-        <div class="info-card"><h3>🌪️ Storm rarely kills</h3><p>Only ~5% of matches have any storm death — the late-game pressure is coming from somewhere else.</p></div>
+        <div class="info-card"><h3><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/></svg> Map rotation is skewed</h3><p>AmbroseValley: 71% of matches. GrandRift: just 7%, an order of magnitude less playtesting signal than the other maps.</p></div>
+        <div class="info-card"><h3><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" x2="19" y1="19" y2="13"/><line x1="16" x2="20" y1="16" y2="20"/><polyline points="9.5 6.5 21 18 21 21 18 21 6.5 9.5"/><line x1="5" x2="9" y1="14" y2="18"/><line x1="7" x2="4" y1="17" y2="20"/></svg> PvP is nearly absent</h3><p>Human-vs-human kills are ~0.1% of all combat events; almost all fighting is against bots.</p></div>
+        <div class="info-card"><h3><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 4H3"/><path d="M18 8H6"/><path d="M19 12H9"/><path d="M16 16h-6"/><path d="M11 20H9"/></svg> Storm rarely kills</h3><p>Only ~5% of matches have any storm death: the late-game pressure is coming from somewhere else.</p></div>
       </div>
     </section>
 
     <section id="roadmap">
-      <h2>Roadmap — if this became a permanent tool</h2>
+      <h2>Roadmap: if this became a permanent tool</h2>
       <p class="lead">This was scoped correctly for a fixed 5-day data snapshot. Full production considerations (data freshness, access control, observability) are in <a href="DOCS.md">DOCS.md</a>. Near-term next steps:</p>
       <ul class="check-list">
         <li>Automated pipeline validation (assert points stay in bounds, human/bot counts reconcile) so a future data refresh can't silently break coordinate mapping</li>

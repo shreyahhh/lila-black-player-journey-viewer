@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>LILA BLACK — Player Journey Viewer</title>
+<title>XCoordinated · LILA BLACK Player Journey Viewer</title>
 <link rel="icon" type="image/png" href="assets/favicon.png" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -29,7 +29,11 @@
   }
   * { box-sizing: border-box; }
   html, body { margin:0; height:100%; font-family: -apple-system, "Segoe UI", system-ui, sans-serif; background:var(--bg); color:var(--text); }
-  #app { display:flex; height:100%; }
+  /* overflow:hidden here (not on #mapWrap) so the map's full-screen intro
+     stretch can visually spill left over the sidebar's reserved space
+     instead of being clipped at #mapWrap's own edge, while still containing
+     the small vertical zoom overshoot so it can't cause a page scrollbar. */
+  #app { display:flex; height:100%; overflow:hidden; }
 
   /* ---------- Sidebar ---------- */
   #sidebar { width:300px; flex-shrink:0; background:var(--panel); border-right:1px solid var(--border); overflow-y:auto; display:flex; flex-direction:column; }
@@ -73,7 +77,62 @@
 
   /* ---------- Map area ---------- */
   #mapWrap { flex:1; position:relative; min-width:0; }
-  #map { position:absolute; inset:0; background:#000; }
+  /* Entrance, four beats, all using a single uniform scale() (never
+     scaleX/scaleY with different factors, so the map image is never
+     stretched) plus a translateX to re-center it, both computed from the
+     real layout in JS:
+       1. fades in (opacity only — no movement yet) at a zoomed-in view,
+          centered in the viewport (translateX offsets for the fact that
+          #map's own box is naturally off-center once the sidebar reserves
+          space on the left)
+       2. holds, fully faded in
+       3. zooms out a bit, still centered and full-screen
+       4. the sidebar/chrome appear and the map squeezes + shifts the rest
+          of the way into its real position alongside it, in sync
+     Leaflet's container itself never resizes (the sidebar's width is
+     reserved in the layout from the start), only this visual transform
+     animates, so there's no need to call invalidateSize() mid-animation. */
+  #map {
+    position:absolute; inset:0; background:#000;
+    transform-origin:50% 50%;
+    transform:translateX(var(--squeeze-translate-x, 0)) scale(calc(var(--squeeze-scale-x, 1) * 1.4));
+    opacity:0;
+  }
+  #map.in { animation:map-intro 2.8s cubic-bezier(.16,1,.3,1) forwards; }
+  @keyframes map-intro {
+    /* The 0%→38% fade overrides to ease-in-out (set on the 0% stop, which
+       governs the segment leading into 38%) — the aggressive ease-out used
+       by default for the later movement made a plain opacity fade complete
+       within its first instant and read as "no fade at all". Later segments
+       fall through to the animation's default ease-out above. */
+    0%   { transform:translateX(var(--squeeze-translate-x, 0)) scale(calc(var(--squeeze-scale-x, 1) * 1.4)); opacity:0; animation-timing-function:ease-in-out; }
+    38%  { transform:translateX(var(--squeeze-translate-x, 0)) scale(calc(var(--squeeze-scale-x, 1) * 1.4)); opacity:1; }
+    68%  { transform:translateX(var(--squeeze-translate-x, 0)) scale(calc(var(--squeeze-scale-x, 1) * 1.12)); opacity:1; }
+    100% { transform:translateX(0) scale(1); opacity:1; }
+  }
+
+  /* The sidebar, top bar, timeline, and Leaflet's zoom control all stay
+     hidden through the full-screen zoom beats and fade in together once the
+     map starts squeezing into its final position (the 68% mark above, i.e.
+     68% of the map's 2.8s animation). */
+  #sidebar.intro, #topBar.intro, #timeline.intro {
+    opacity:0;
+    transition:opacity .9s cubic-bezier(.16,1,.3,1) 1.9s, transform .9s cubic-bezier(.16,1,.3,1) 1.9s;
+  }
+  #sidebar.intro { transform:translateX(-18px); }
+  #topBar.intro { transform:translateY(-10px); }
+  #timeline.intro { transform:translateY(10px); }
+  #sidebar.intro.in, #topBar.intro.in, #timeline.intro.in { opacity:1; transform:translate(0); }
+
+  .leaflet-control-zoom { opacity:0; transition:opacity .9s cubic-bezier(.16,1,.3,1) 1.9s; }
+  #mapWrap.in .leaflet-control-zoom { opacity:1; }
+
+  @media (prefers-reduced-motion: reduce) {
+    #map.in { animation:none; }
+    #map, #sidebar.intro, #topBar.intro, #timeline.intro, .leaflet-control-zoom {
+      transition:none; transform:none; opacity:1;
+    }
+  }
 
   #loadingOverlay {
     position:absolute; top:16px; right:150px; z-index:1200;
@@ -136,12 +195,12 @@
 </head>
 <body>
 <div id="app">
-  <div id="sidebar">
+  <div id="sidebar" class="intro">
     <div id="brand">
-      <img class="mark" src="assets/lila-logo.png" alt="LILA Games" />
+      <img class="mark" src="assets/lila-logo.png?v=2" alt="LILA Games" />
       <div>
-        <h1>LILA BLACK</h1>
-        <p>Player Journey Viewer</p>
+        <h1>XCoordinated</h1>
+        <p>LILA BLACK Player Journey Viewer</p>
       </div>
     </div>
 
@@ -159,16 +218,16 @@
       <h2>Heatmap</h2>
       <select id="heatSelect">
         <option value="off">Off</option>
-        <option value="match">This match — positions</option>
-        <option value="traffic">All matches — traffic</option>
-        <option value="kills">All matches — kill zones</option>
-        <option value="deaths">All matches — death zones</option>
+        <option value="match">This match (positions)</option>
+        <option value="traffic">All matches (traffic)</option>
+        <option value="kills">All matches (kill zones)</option>
+        <option value="deaths">All matches (death zones)</option>
       </select>
     </div>
 
     <div class="card">
       <h2>Match</h2>
-      <div id="matchId">—</div>
+      <div id="matchId">No match selected</div>
       <div id="matchStats" style="margin-top:8px"></div>
     </div>
 
@@ -191,7 +250,7 @@
     <div id="emptyState"><div>Select a map, date, and match to begin.</div></div>
     <div id="loadingOverlay"><span class="spinner"></span><span id="loadingText">Loading…</span></div>
 
-    <div id="topBar">
+    <div id="topBar" class="intro">
       <a class="pill-link" href="index.html">← Home</a>
       <a class="icon-link" href="docs.html" title="Documentation" aria-label="Documentation">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -204,7 +263,7 @@
       </a>
     </div>
 
-    <div id="timeline">
+    <div id="timeline" class="intro">
       <button id="playBtn">▶</button>
       <span id="timeLabel">0:00 / 0:00</span>
       <input type="range" id="scrubber" min="0" max="0" value="0" />
@@ -219,6 +278,26 @@
 </div>
 
 <script>
+// Measure the real layout now (sidebar width is reserved from the start, so
+// #mapWrap's box never changes size) and set the horizontal scale #map needs
+// to visually cover the sidebar's area too, right-anchored so its edge lines
+// up with the viewport edge. See the #map CSS comment for the full picture.
+function setMapSqueezeScale() {
+  const mapWrap = document.getElementById("mapWrap");
+  const rect = mapWrap.getBoundingClientRect();
+  const scaleX = window.innerWidth / rect.width;
+  const sidebarWidth = document.getElementById("sidebar").getBoundingClientRect().width;
+  const mapEl = document.getElementById("map");
+  mapEl.style.setProperty("--squeeze-scale-x", scaleX.toFixed(4));
+  // #map's own box is naturally centered at (sidebarWidth + mapWrapWidth) / 2,
+  // which is off-center from the viewport's true center by half the
+  // sidebar's width — shift left by that much so the full-screen intro
+  // renders centered on screen instead of skewed toward the map's own side.
+  mapEl.style.setProperty("--squeeze-translate-x", `${(-sidebarWidth / 2).toFixed(2)}px`);
+}
+setMapSqueezeScale();
+window.addEventListener("resize", setMapSqueezeScale);
+
 const DATA_BASE = "data";
 
 let leafletMap, currentMatch, currentImgDims;
@@ -336,7 +415,7 @@ function renderMatch(match) {
       if (!style) return; // Position/BotPosition — path already shows movement
       const m = L.circleMarker(toLatLng(px, py, imgH), {
         radius: style.radius, color: style.color, fillColor: style.color, fillOpacity: 0.9, weight: 1,
-      }).bindTooltip(`${event} — ${p.is_human ? "human" : "bot"} ${p.user_id}`);
+      }).bindTooltip(`${event}: ${p.is_human ? "human" : "bot"} ${p.user_id}`);
       m.addTo(leafletMap);
       markerLayers.push(m);
     });
@@ -510,6 +589,16 @@ document.getElementById("matchSelect").addEventListener("change", selectMatch);
   populateSelect(document.getElementById("mapSelect"), maps);
   await refreshDates();
   hideLoading();
+
+  // Entrance: the map holds full-screen first, then squeezes into its real
+  // position in sync with the sidebar sliding in (see #map/#sidebar.intro CSS).
+  requestAnimationFrame(() => {
+    document.getElementById("map").classList.add("in");
+    document.getElementById("mapWrap").classList.add("in");
+    document.getElementById("sidebar").classList.add("in");
+    document.getElementById("topBar").classList.add("in");
+    document.getElementById("timeline").classList.add("in");
+  });
 })();
 </script>
 </body>
