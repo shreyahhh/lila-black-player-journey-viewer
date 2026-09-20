@@ -2,7 +2,7 @@
 
 A browser-based tool for the Level Design team to explore player behavior on LILA BLACK's maps: movement paths, kills/deaths/loot/storm events, human-vs-bot distinction, match playback, and heatmaps (traffic, kill zones, death zones — aggregated across all matches on a map).
 
-**Live demo:** _<add hosted URL here after deployment>_
+**Live demo:** https://shreyahhh.github.io/lila-black-player-journey-viewer/
 
 ## Tech stack
 
