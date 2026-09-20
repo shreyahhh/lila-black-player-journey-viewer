@@ -2,341 +2,198 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>LILA BLACK — Player Journey Viewer</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<link rel="icon" type="image/png" href="assets/favicon.png" />
 <style>
-  html, body { margin:0; height:100%; font-family: system-ui, sans-serif; background:#111; color:#eee; }
-  #app { display:flex; height:100%; }
-  #sidebar { width:280px; padding:12px; box-sizing:border-box; background:#1a1a1a; overflow-y:auto; }
-  #sidebar h1 { font-size:15px; margin:0 0 12px; }
-  #sidebar label { display:block; font-size:12px; margin:10px 0 4px; color:#999; }
-  #sidebar select, #sidebar button { width:100%; padding:6px; box-sizing:border-box; }
-  #map { flex:1; background:#000; }
-  #timeline { position:absolute; left:292px; right:12px; bottom:12px; background:rgba(0,0,0,.7); padding:8px 12px; border-radius:6px; z-index:1000; }
-  #timeline input[type=range] { width:100%; }
-  #legend { font-size:12px; margin-top:16px; line-height:1.8; }
-  .dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; vertical-align:middle; }
-  #matchInfo { font-size:12px; color:#aaa; margin-top:8px; white-space:pre-line; }
-  #timelineRow { display:flex; align-items:center; gap:8px; color:#ddd; font-size:12px; }
+  :root {
+    --bg: #0d0f12;
+    --panel: #14181d;
+    --border: #2a323c;
+    --text: #e7ebee;
+    --text-dim: #8b96a3;
+    --text-faint: #5a6472;
+    --human: #4da3ff;
+    --green: #34d399;
+    --red: #f87171;
+    --purple: #a78bfa;
+    --yellow: #fbbf24;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin:0; min-height:100%; font-family: -apple-system, "Segoe UI", system-ui, sans-serif; background:var(--bg); color:var(--text); }
+
+  #hero {
+    position:relative; min-height:100vh; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; text-align:center; padding:100px 20px 60px;
+    background:var(--bg); overflow:hidden;
+  }
+
+  /* Map as a corner accent graphic, not a full-bleed backdrop. The source
+     image already fades to black in its own corners (the minimap art sits
+     on a black canvas), so no extra gradient mask is needed here — it just
+     doubled up the black and looked like a hard box before. */
+  #mapCorner {
+    position:absolute; top:0; right:0; width:min(58vw, 900px); aspect-ratio:1/1;
+    background: url("assets/hero-bg.jpg") top right / cover no-repeat;
+    z-index:0; pointer-events:none;
+  }
+
+  nav { position:absolute; top:28px; left:0; right:0; display:flex; align-items:center; justify-content:center; gap:10px; z-index:2; }
+  nav img { width:24px; height:24px; }
+  nav span { font-size:12px; font-weight:600; letter-spacing:.1em; color:var(--text-dim); text-transform:uppercase; }
+
+  #content { position:relative; z-index:2; max-width:620px; display:flex; flex-direction:column; align-items:center; }
+  .eyebrow { font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--human); margin:0 0 16px; font-weight:600; }
+  h1 { font-size:clamp(32px, 4.2vw, 48px); line-height:1.15; margin:0 0 18px; font-weight:700; letter-spacing:-.015em; }
+  .subtitle { font-size:16px; color:var(--text-dim); line-height:1.7; margin:0 0 32px; max-width:520px; }
+
+  .cta-row { display:flex; align-items:center; justify-content:center; }
+  .btn-primary {
+    display:inline-flex; align-items:center; gap:9px;
+    background:var(--text); color:#0d0f12; font-size:15px; font-weight:600;
+    padding:14px 26px; border-radius:8px; text-decoration:none; white-space:nowrap;
+    box-shadow:0 10px 30px rgba(0,0,0,.4);
+  }
+  .btn-primary:hover { background:#fff; }
+  .btn-primary svg { transition:transform .15s ease; }
+  .btn-primary:hover svg { transform:translateX(3px); }
+
+  footer.stats { position:relative; z-index:2; font-size:12px; color:var(--text-faint); margin-top:36px; }
+
+  .docs-link {
+    position:absolute; top:24px; right:32px; z-index:2;
+    display:flex; align-items:center; justify-content:center;
+    width:44px; height:44px; border-radius:50%;
+    color:var(--text-dim); border:1px solid var(--border);
+    background:rgba(20,24,29,.5); transition:background .15s ease, color .15s ease, border-color .15s ease;
+  }
+  .docs-link svg { width:18px; height:18px; }
+  .docs-link:hover { color:var(--text); border-color:var(--text-dim); background:rgba(20,24,29,.8); }
+
+  /* ---------- Intro: pixel curtain reveal ---------- */
+  /* Inspired by motion.dev's "Curtains: Pixels" transition — a grid of blocks
+     that dissolve away in a directional wipe with randomized per-block jitter,
+     rather than a uniform wipe. Built here in plain CSS/JS (that example's
+     exact source is a locked Motion+ example). */
+  #curtain {
+    position:absolute; top:0; left:0; width:100%; z-index:100; display:grid; pointer-events:none;
+  }
+  #curtain .cell { background:#000; opacity:1; }
+
+  body > #hero { opacity:0; }
+  body > #hero.reveal { opacity:1; transition:opacity .3s ease; }
+
+  @media (prefers-reduced-motion: reduce) {
+    #curtain { display:none; }
+    #hero { opacity:1; }
+  }
+
+  @media (max-width: 600px) {
+    #hero { padding:90px 20px 40px; }
+  }
 </style>
 </head>
 <body>
-<div id="app">
-  <div id="sidebar">
-    <h1>LILA BLACK — Player Journeys</h1>
+<div id="curtain"></div>
 
-    <label>Map</label>
-    <select id="mapSelect"></select>
+<div id="hero">
+  <div id="mapCorner"></div>
+  <nav>
+    <img src="assets/lila-logo.png" alt="LILA Games" />
+    <span>LILA Games · LILA BLACK</span>
+  </nav>
+  <a class="docs-link" href="docs.html" title="Documentation" aria-label="Documentation">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/>
+      <path d="M14 2v4a2 2 0 0 0 2 2h4"/>
+      <path d="M10 9H8"/>
+      <path d="M16 13H8"/>
+      <path d="M16 17H8"/>
+    </svg>
+  </a>
 
-    <label>Date</label>
-    <select id="dateSelect"></select>
+  <div id="content">
+    <div class="eyebrow">Level Design Tooling</div>
+    <h1>See exactly how players move, fight, and die on your maps</h1>
+    <p class="subtitle">A browser-based tool that turns raw match telemetry into player paths, event markers, live playback, and kill/death heatmaps — mapped pixel-accurately onto the real minimaps.</p>
 
-    <label>Match</label>
-    <select id="matchSelect"></select>
-
-    <label>Heatmap</label>
-    <select id="heatSelect">
-      <option value="off">Off</option>
-      <option value="match">This match (positions)</option>
-      <option value="traffic">All matches on map — traffic</option>
-      <option value="kills">All matches on map — kill zones</option>
-      <option value="deaths">All matches on map — death zones</option>
-    </select>
-
-    <div id="matchInfo"></div>
-
-    <div id="legend">
-      <div><span class="dot" style="background:#3aa0ff"></span>Human path</div>
-      <div><span class="dot" style="background:#999"></span>Bot path</div>
-      <div><span class="dot" style="background:#2ecc71"></span>Kill</div>
-      <div><span class="dot" style="background:#e74c3c"></span>Death / Killed</div>
-      <div><span class="dot" style="background:#9b59b6"></span>Storm death</div>
-      <div><span class="dot" style="background:#f1c40f"></span>Loot</div>
+    <div class="cta-row">
+      <a class="btn-primary" href="viewer.html">
+        Open the Map Viewer
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
     </div>
 
-    <p style="font-size:11px;color:#666;margin-top:20px">
-      Coordinate mapping (the accuracy-critical piece) is fully implemented
-      and verified against real data. Filtering, timeline/playback, and
-      heatmaps (traffic/kill-zones/death-zones, map-wide across all matches)
-      are functional — UI polish is a good next-pass target.
-    </p>
-  </div>
-
-  <div id="map"></div>
-
-  <div id="timeline">
-    <div id="timelineRow">
-      <button id="playBtn" style="width:auto">▶</button>
-      <span id="timeLabel">0s / 0s</span>
-      <input type="range" id="scrubber" min="0" max="0" value="0" />
-    </div>
+    <footer class="stats">3 maps · 796 matches · 89,104 events · Feb 10–14, 2026</footer>
   </div>
 </div>
 
 <script>
-const DATA_BASE = "data";
+  // Faithful port of motion.dev's "Curtains: Pixels" reveal algorithm.
+  // Extracted from their shipped source (assets/use-curtains-*.js, function `ne`/
+  // its helper `Gt`) since the formatted example source is a locked Motion+
+  // feature — the shipped, executable JS is not. Ported from Motion's
+  // animate()/WAAPI calls to plain CSS transitions so this page has no
+  // framework dependency. Same math: each tile's reveal delay is a blend of
+  // (a) its position projected onto an `angle` direction, normalized 0-1
+  // across the grid, and (b) pure per-tile randomness, mixed by `noise`
+  // (0 = clean directional wipe, 1 = fully random per-tile).
+  (function pixelCurtainReveal({ size = 100, angle = 90, noise = 0.4, duration = 0.5, maxDelayFraction = 0.4 } = {}) {
+    const curtain = document.getElementById('curtain');
+    // Cover the FULL page, not just the first viewport — the hero can be
+    // taller than 100vh on smaller/narrower screens, and a fixed-viewport
+    // overlay would leave the rest of the page unmasked underneath it.
+    const vw = document.documentElement.scrollWidth;
+    const vh = document.documentElement.scrollHeight;
+    curtain.style.height = `${vh}px`;
+    const cols = Math.max(1, Math.ceil(vw / size));
+    const rows = Math.max(1, Math.ceil(vh / size));
+    curtain.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+    curtain.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
 
-let leafletMap, imageOverlay, currentMatch, currentImgDims;
-let pathLayers = [], markerLayers = [], playheadLayers = [], heatLayer = null;
-let playing = false, playTimer = null;
-
-const EVENT_STYLE = {
-  Kill:          { color: "#2ecc71", radius: 5 },
-  BotKill:       { color: "#2ecc71", radius: 5 },
-  Killed:        { color: "#e74c3c", radius: 5 },
-  BotKilled:     { color: "#e74c3c", radius: 5 },
-  KilledByStorm: { color: "#9b59b6", radius: 6 },
-  Loot:          { color: "#f1c40f", radius: 3 },
-};
-
-function toLatLng(px, py, imgH) {
-  // Leaflet's CRS.Simple treats increasing "lat" as UP the screen, but our
-  // preprocessed pixel coords use image convention (Y increases DOWN from
-  // top-left). Flip here, once, at the render boundary.
-  return [imgH - py, px];
-}
-
-async function loadIndex() {
-  const res = await fetch(`${DATA_BASE}/index.json`);
-  return res.json();
-}
-
-function populateSelect(el, values) {
-  el.innerHTML = "";
-  values.forEach(v => {
-    const opt = document.createElement("option");
-    opt.value = v; opt.textContent = v;
-    el.appendChild(opt);
-  });
-}
-
-let currentMapId = null;
-
-function initMapView(map_id, dims) {
-  const { width, height } = dims;
-  const bounds = [[0, 0], [height, width]];
-
-  if (leafletMap && map_id === currentMapId) {
-    // Same map image already loaded — just reset the view, don't tear down
-    // the Leaflet instance (destroying it mid zoom-animation throws).
-    leafletMap.fitBounds(bounds, { animate: false });
-    currentImgDims = dims;
-    return;
-  }
-
-  if (leafletMap) leafletMap.remove();
-  leafletMap = L.map("map", { crs: L.CRS.Simple, minZoom: -4, zoomAnimation: false });
-  imageOverlay = L.imageOverlay(`minimaps/${map_id}_Minimap${mapImageExt(map_id)}`, bounds).addTo(leafletMap);
-  leafletMap.fitBounds(bounds, { animate: false });
-  currentImgDims = dims;
-  currentMapId = map_id;
-}
-
-function mapImageExt(map_id) {
-  return map_id === "Lockdown" ? ".jpg" : ".png";
-}
-
-function clearLayers() {
-  [...pathLayers, ...markerLayers, ...playheadLayers].forEach(l => leafletMap.removeLayer(l));
-  pathLayers = []; markerLayers = []; playheadLayers = [];
-  if (heatLayer) { leafletMap.removeLayer(heatLayer); heatLayer = null; }
-}
-
-async function loadMatch(mapId, file) {
-  const res = await fetch(`${DATA_BASE}/${file}`);
-  const match = await res.json();
-  currentMatch = match;
-  renderMatch(match);
-}
-
-function renderMatch(match) {
-  clearLayers();
-  const imgH = currentImgDims.height;
-
-  let humanCount = 0, botCount = 0;
-  match.players.forEach(p => {
-    if (p.is_human) humanCount++; else botCount++;
-
-    const latlngs = p.points.map(pt => toLatLng(pt[1], pt[2], imgH));
-    const path = L.polyline(latlngs, {
-      color: p.is_human ? "#3aa0ff" : "#999",
-      weight: p.is_human ? 2 : 1,
-      opacity: 0.6,
-    }).addTo(leafletMap);
-    pathLayers.push(path);
-
-    p.points.forEach(pt => {
-      const [, px, py, , event] = pt;
-      const style = EVENT_STYLE[event];
-      if (!style) return; // Position/BotPosition — path already shows movement
-      const m = L.circleMarker(toLatLng(px, py, imgH), {
-        radius: style.radius, color: style.color, fillColor: style.color, fillOpacity: 0.9, weight: 1,
-      }).bindTooltip(`${event} — ${p.is_human ? "human" : "bot"} ${p.user_id}`);
-      m.addTo(leafletMap);
-      markerLayers.push(m);
-    });
-  });
-
-  document.getElementById("matchInfo").textContent =
-    `Match: ${match.match_id.slice(0,8)}...\nMap: ${match.map_id}\nDate: ${match.date}\n` +
-    `Duration: ${match.duration_sec}s\nHumans: ${humanCount}  Bots: ${botCount}`;
-
-  const scrubber = document.getElementById("scrubber");
-  scrubber.max = match.duration_sec;
-  scrubber.value = 0;
-  updateTimeLabel(0, match.duration_sec);
-
-  applyHeatMode();
-}
-
-const aggregateCache = {}; // map_id -> { traffic, kills, deaths }
-
-async function loadAggregate(mapId) {
-  if (aggregateCache[mapId]) return aggregateCache[mapId];
-  const res = await fetch(`${DATA_BASE}/${mapId}/_aggregate.json`);
-  const agg = await res.json();
-  aggregateCache[mapId] = agg;
-  return agg;
-}
-
-async function applyHeatMode() {
-  if (heatLayer) { leafletMap.removeLayer(heatLayer); heatLayer = null; }
-  const mode = document.getElementById("heatSelect").value;
-  if (mode === "off" || !currentMatch) return;
-  const imgH = currentImgDims.height;
-
-  if (mode === "match") {
-    const pts = [];
-    currentMatch.players.forEach(p => p.points.forEach(pt => {
-      const [lat, lng] = toLatLng(pt[1], pt[2], imgH);
-      pts.push([lat, lng, 0.5]);
-    }));
-    heatLayer = L.heatLayer(pts, { radius: 18, blur: 22 }).addTo(leafletMap);
-    return;
-  }
-
-  // Map-wide modes: aggregated across ALL matches for this map, precomputed
-  // by the pipeline into data/<map>/_aggregate.json (raw pixel points).
-  const agg = await loadAggregate(currentMatch.map_id);
-  const raw = agg[mode] || []; // "traffic" | "kills" | "deaths"
-  const pts = raw.map(([px, py]) => {
-    const [lat, lng] = toLatLng(px, py, imgH);
-    return [lat, lng, 0.5];
-  });
-  // Traffic has 10-100x more points than kills/deaths (every movement tick
-  // vs. one-off events), so with a fixed intensity scale it saturates the
-  // whole map to solid red and shows no contrast. Scale `max` by point
-  // count so all three modes land in a readable gradient.
-  const radius = mode === "traffic" ? 12 : 22;
-  const max = mode === "traffic" ? Math.max(3, pts.length / 4000) : 1;
-  heatLayer = L.heatLayer(pts, { radius, blur: radius + 6, max, maxZoom: 2 }).addTo(leafletMap);
-}
-
-// --- Timeline / playback: interpolate each player's position at time t ---
-function positionAt(points, t) {
-  if (t <= points[0][0]) return points[0];
-  if (t >= points[points.length - 1][0]) return points[points.length - 1];
-  for (let i = 0; i < points.length - 1; i++) {
-    const [t0, ...a] = points[i];
-    const [t1, ...b] = points[i + 1];
-    if (t >= t0 && t <= t1) {
-      const f = t1 === t0 ? 0 : (t - t0) / (t1 - t0);
-      return [t, a[0] + (b[0]-a[0])*f, a[1] + (b[1]-a[1])*f, a[2] + (b[2]-a[2])*f, a[3]];
+    const tiles = [];
+    for (let i = 0; i < rows * cols; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      curtain.appendChild(cell);
+      tiles.push(cell);
     }
-  }
-  return points[points.length - 1];
-}
 
-function renderPlayheads(t) {
-  playheadLayers.forEach(l => leafletMap.removeLayer(l));
-  playheadLayers = [];
-  if (!currentMatch) return;
-  const imgH = currentImgDims.height;
-  currentMatch.players.forEach(p => {
-    if (p.points.length === 0) return;
-    const [, px, py] = positionAt(p.points, t);
-    const marker = L.circleMarker(toLatLng(px, py, imgH), {
-      radius: 6, color: "#fff", weight: 2,
-      fillColor: p.is_human ? "#3aa0ff" : "#999", fillOpacity: 1,
-    }).addTo(leafletMap);
-    playheadLayers.push(marker);
-  });
-}
+    // --- Gt(): per-tile value = normalized directional projection, blended with noise ---
+    const rad = angle * Math.PI / 180, cosA = Math.cos(rad), sinA = Math.sin(rad);
+    const dw = vw / cols, dh = vh / rows;
+    const raw = new Array(tiles.length);
+    let min = Infinity, max = -Infinity;
+    for (let i = 0; i < tiles.length; i++) {
+      const col = i % cols, row = Math.floor(i / cols);
+      const cx = (col + 0.5) * dw, cy = (row + 0.5) * dh;
+      const t = cx * cosA + cy * sinA;
+      raw[i] = t;
+      if (t < min) min = t;
+      if (t > max) max = t;
+    }
+    const range = (max - min) || 1;
+    const g = Math.min(1, Math.max(0, noise));
+    const delays = raw.map(t => {
+      const s = (t - min) / range;
+      return s * (1 - g) + Math.random() * g; // Gt()'s exact blend formula
+    });
 
-function updateTimeLabel(t, dur) {
-  document.getElementById("timeLabel").textContent = `${Math.round(t)}s / ${dur}s`;
-}
+    tiles.forEach((cell, i) => {
+      cell.style.transition = `opacity ${duration}s cubic-bezier(.76,0,.24,1) ${delays[i] * maxDelayFraction}s`;
+    });
 
-document.getElementById("scrubber").addEventListener("input", e => {
-  const t = Number(e.target.value);
-  renderPlayheads(t);
-  updateTimeLabel(t, currentMatch ? currentMatch.duration_sec : 0);
-});
+    document.getElementById('hero').classList.add('reveal');
 
-document.getElementById("playBtn").addEventListener("click", () => {
-  playing = !playing;
-  document.getElementById("playBtn").textContent = playing ? "⏸" : "▶";
-  if (playing) {
-    playTimer = setInterval(() => {
-      const scrubber = document.getElementById("scrubber");
-      let t = Number(scrubber.value) + 1;
-      if (t > Number(scrubber.max)) t = 0;
-      scrubber.value = t;
-      renderPlayheads(t);
-      updateTimeLabel(t, currentMatch.duration_sec);
-    }, 100); // 10x real-time playback
-  } else {
-    clearInterval(playTimer);
-  }
-});
+    // Two rAFs: let the transition property commit before flipping opacity,
+    // otherwise the browser can coalesce it into the initial paint (no animation).
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      tiles.forEach(cell => { cell.style.opacity = '0'; });
+    }));
 
-document.getElementById("heatSelect").addEventListener("change", applyHeatMode);
-
-// --- Filtering wiring ---
-let INDEX;
-
-async function refreshDates() {
-  const mapId = document.getElementById("mapSelect").value;
-  const dates = [...new Set(INDEX.matches.filter(m => m.map_id === mapId).map(m => m.date))].sort();
-  populateSelect(document.getElementById("dateSelect"), dates);
-  await refreshMatches();
-}
-
-async function refreshMatches() {
-  const mapId = document.getElementById("mapSelect").value;
-  const date = document.getElementById("dateSelect").value;
-  const matches = INDEX.matches.filter(m => m.map_id === mapId && m.date === date);
-  const matchSelect = document.getElementById("matchSelect");
-  matchSelect.innerHTML = "";
-  matches.forEach(m => {
-    const opt = document.createElement("option");
-    opt.value = m.file;
-    opt.textContent = `${m.match_id.slice(0,8)}  (${m.human_count}h/${m.bot_count}b, ${m.duration_sec}s)`;
-    matchSelect.appendChild(opt);
-  });
-  if (matches.length) await selectMatch();
-}
-
-async function selectMatch() {
-  const mapId = document.getElementById("mapSelect").value;
-  const file = document.getElementById("matchSelect").value;
-  if (!file) return;
-  initMapView(mapId, INDEX.maps[mapId]);
-  await loadMatch(mapId, file);
-}
-
-document.getElementById("mapSelect").addEventListener("change", refreshDates);
-document.getElementById("dateSelect").addEventListener("change", refreshMatches);
-document.getElementById("matchSelect").addEventListener("change", selectMatch);
-
-(async function init() {
-  INDEX = await loadIndex();
-  const maps = [...new Set(INDEX.matches.map(m => m.map_id))].sort();
-  populateSelect(document.getElementById("mapSelect"), maps);
-  await refreshDates();
-})();
+    const totalMs = (maxDelayFraction + duration) * 1000;
+    setTimeout(() => { curtain.remove(); }, totalMs + 50);
+  })();
 </script>
 </body>
 </html>
