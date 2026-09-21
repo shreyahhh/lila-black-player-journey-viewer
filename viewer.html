@@ -353,6 +353,22 @@ function populateSelect(el, values) {
 
 let currentMapId = null;
 
+// fitBounds() always does a "contain" fit — it shrinks the view until the
+// WHOLE image is visible, which for a square-ish minimap in a wide/short
+// container leaves large empty margins on every side instead of filling it.
+// All three minimaps are square or near-square, so this showed up on every
+// map. fitMapCover() instead does a "cover" fit — like CSS background-size:
+// cover — scaling to whichever axis needs more zoom so the image fills the
+// container completely (cropping the excess on the other axis) and
+// centering it.
+function fitMapCover(imgWidth, imgHeight) {
+  const size = leafletMap.getSize();
+  if (size.x === 0 || size.y === 0) return; // container not laid out yet
+  const scale = Math.max(size.x / imgWidth, size.y / imgHeight);
+  const zoom = Math.log2(scale);
+  leafletMap.setView([imgHeight / 2, imgWidth / 2], zoom, { animate: false });
+}
+
 function initMapView(map_id, dims) {
   const { width, height } = dims;
   const bounds = [[0, 0], [height, width]];
@@ -360,15 +376,19 @@ function initMapView(map_id, dims) {
   if (leafletMap && map_id === currentMapId) {
     // Same map image already loaded — just reset the view, don't tear down
     // the Leaflet instance (destroying it mid zoom-animation throws).
-    leafletMap.fitBounds(bounds, { animate: false });
+    fitMapCover(width, height);
     currentImgDims = dims;
     return;
   }
 
   if (leafletMap) leafletMap.remove();
-  leafletMap = L.map("map", { crs: L.CRS.Simple, minZoom: -4, zoomAnimation: false, attributionControl: false });
+  leafletMap = L.map("map", { crs: L.CRS.Simple, minZoom: -8, zoomSnap: 0, zoomDelta: 0.5, zoomAnimation: false, attributionControl: false });
   L.imageOverlay(`minimaps/${map_id}_Minimap${mapImageExt(map_id)}`, bounds).addTo(leafletMap);
-  leafletMap.fitBounds(bounds, { animate: false });
+  fitMapCover(width, height);
+  // Re-cover on every resize (window resize, or the sidebar's own layout
+  // changing) instead of leaving the old zoom/crop in place, which is what
+  // used to make the map fail to fill the screen after a resize.
+  leafletMap.on("resize", () => fitMapCover(width, height));
   currentImgDims = dims;
   currentMapId = map_id;
 }

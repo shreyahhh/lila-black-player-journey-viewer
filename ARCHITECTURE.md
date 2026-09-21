@@ -2,9 +2,9 @@
 
 ## What this is built with, and why
 
-- **Preprocessing: Python (pyarrow + Pillow), no pandas dependency in the final pipeline.** The raw data is 1,243 small Parquet files (~6MB total) that need per-row transforms and per-match grouping — a one-time offline script is simpler and more debuggable than doing this in the browser, and it means the frontend never touches Parquet, binary-encoded columns, or Arrow at all.
-- **Frontend: static HTML + Leaflet (`L.CRS.Simple`) + Leaflet.heat, no build step.** A Level Designer opens a URL — there's no backend to keep alive, no server cost, and Leaflet's non-geographic CRS mode is the standard, well-trodden tool for exactly this "world coordinates on a static image" problem (used across the PUBG/GTA/Rust map-tooling community).
-- **Hosting: static file host (Vercel/Netlify/GitHub Pages).** Output of preprocessing is ~5.4MB of JSON — small enough to commit and serve directly, no database or API needed.
+- **Preprocessing: Python (pyarrow + Pillow), no pandas dependency in the final pipeline.** The raw data is 1,243 small Parquet files (~6MB total) that need per-row transforms and per-match grouping - a one-time offline script is simpler and more debuggable than doing this in the browser, and it means the frontend never touches Parquet, binary-encoded columns, or Arrow at all.
+- **Frontend: static HTML + Leaflet (`L.CRS.Simple`) + Leaflet.heat, no build step.** A Level Designer opens a URL - there's no backend to keep alive, no server cost, and Leaflet's non-geographic CRS mode is the standard, well-trodden tool for exactly this "world coordinates on a static image" problem (used across the PUBG/GTA/Rust map-tooling community).
+- **Hosting: static file host (Vercel/Netlify/GitHub Pages).** Output of preprocessing is ~5.4MB of JSON - small enough to commit and serve directly, no database or API needed.
 
 ## Data flow
 
@@ -30,11 +30,11 @@ data/index.json                 (filter index: map × date × match)
 Level Designer's browser
 ```
 
-## Coordinate mapping — verified, not assumed
+## Coordinate mapping - verified, not assumed
 
 The README states the transform and per-map `scale`/`origin` values, and gives one worked example. Rather than trust it blindly, I loaded the real dataset and validated it end-to-end before building anything on top:
 
-1. **The formula is correct.** For all 89,104 rows across all 3 maps, `100%` of computed pixel coordinates land inside the map image bounds — no clipping, no out-of-range points.
+1. **The formula is correct.** For all 89,104 rows across all 3 maps, `100%` of computed pixel coordinates land inside the map image bounds - no clipping, no out-of-range points.
 2. **The README's claimed minimap size (1024×1024) is wrong for the actual asset files:**
 
    | Map | README claims | Actual measured size |
@@ -60,13 +60,13 @@ Only `x` and `z` are used for the 2D map; `y` is elevation and is carried throug
 | Issue | What we found | How handled |
 |---|---|---|
 | Minimap image size | README says 1024×1024; real files are much larger and GrandRift isn't square | Read actual image dimensions at runtime, never hardcode 1024 |
-| `ts` column | Parquet types it `timestamp[ms]` and README calls it "match-relative elapsed time"; neither is right. The raw int64, decoded as Unix-epoch **seconds**, lands on real dates inside Feb 10–14 2026 (the dataset's actual collection window) — decoded as milliseconds (the declared type) it lands on 1970-01-21, which is nonsense | Read the raw int64 directly, treat as epoch seconds, then convert to match-relative seconds (`t - match_start`) for playback — sidesteps the mislabeling entirely since only relative ordering matters for the tool |
-| Human/bot detection | Event name (`Position` vs `BotPosition` etc.) is **not reliable** — bot `user_id`s were found emitting plain `Position` and `Loot` events, not just `Bot*` events | Classify strictly by `user_id` format (UUID regex vs. numeric), exactly as the README's filename convention describes, and ignore event-name prefixes for this purpose |
-| Multiple maps per match | Verified 0 matches reference more than one `map_id` — grouping by `match_id` alone is safe | No special handling needed |
+| `ts` column | Parquet types it `timestamp[ms]` and README calls it "match-relative elapsed time"; neither is right. The raw int64, decoded as Unix-epoch **seconds**, lands on real dates inside Feb 10–14 2026 (the dataset's actual collection window) - decoded as milliseconds (the declared type) it lands on 1970-01-21, which is nonsense | Read the raw int64 directly, treat as epoch seconds, then convert to match-relative seconds (`t - match_start`) for playback - sidesteps the mislabeling entirely since only relative ordering matters for the tool |
+| Human/bot detection | Event name (`Position` vs `BotPosition` etc.) is **not reliable** - bot `user_id`s were found emitting plain `Position` and `Loot` events, not just `Bot*` events | Classify strictly by `user_id` format (UUID regex vs. numeric), exactly as the README's filename convention describes, and ignore event-name prefixes for this purpose |
+| Multiple maps per match | Verified 0 matches reference more than one `map_id` - grouping by `match_id` alone is safe | No special handling needed |
 | Missing/garbled rows | 0 nulls, 0 NaN/Inf in x/y/z across all 89,104 rows; all 1,243 files parsed without error | No filtering/cleanup step needed beyond decoding `event` bytes |
-| Sparse per-player files | 4 matches have a player file with only 2 rows total (e.g. one `Position` immediately followed by `BotKilled` ~13-75s later, barely moving) — real telemetry gaps, not corrupt data | Rendered as-is: a short path segment / near-stationary dot. No interpolation artifacts since the two points are close together in this dataset, but a future dataset with a large position gap would render as a straight-line "teleport" between samples — worth a gap-detection heuristic (e.g. dashed line above some time delta) if that shows up |
-| Events referencing actors with no file in the match | Some matches have e.g. a `BotKilled` event in a human's file with 0 corresponding bot files present for that `match_id` (16 matches have 0 human files at all — bot-only matches; the inverse, a human-only match where bots are referenced only via combat events, also occurs) | The tool only renders players/bots for which an explicit position file exists in the dataset — it doesn't fabricate a path for an actor it has no position data for. Documented here rather than silently producing an incomplete-looking scene without explanation |
-| Map/date/match filter combinations | Verified every (map, date) pair in the dataset has ≥1 match (min 5, e.g. GrandRift on Feb 13) — an empty-results dropdown state can't currently occur | The date dropdown is populated only from dates that already have matches for the selected map, so this is structurally prevented rather than just untested; worth revisiting if a future data drop has sparser combinations |
+| Sparse per-player files | 4 matches have a player file with only 2 rows total (e.g. one `Position` immediately followed by `BotKilled` ~13-75s later, barely moving) - real telemetry gaps, not corrupt data | Rendered as-is: a short path segment / near-stationary dot. No interpolation artifacts since the two points are close together in this dataset, but a future dataset with a large position gap would render as a straight-line "teleport" between samples - worth a gap-detection heuristic (e.g. dashed line above some time delta) if that shows up |
+| Events referencing actors with no file in the match | Some matches have e.g. a `BotKilled` event in a human's file with 0 corresponding bot files present for that `match_id` (16 matches have 0 human files at all - bot-only matches; the inverse, a human-only match where bots are referenced only via combat events, also occurs) | The tool only renders players/bots for which an explicit position file exists in the dataset - it doesn't fabricate a path for an actor it has no position data for. Documented here rather than silently producing an incomplete-looking scene without explanation |
+| Map/date/match filter combinations | Verified every (map, date) pair in the dataset has ≥1 match (min 5, e.g. GrandRift on Feb 13) - an empty-results dropdown state can't currently occur | The date dropdown is populated only from dates that already have matches for the selected map, so this is structurally prevented rather than just untested; worth revisiting if a future data drop has sparser combinations |
 
 ## Major tradeoffs
 

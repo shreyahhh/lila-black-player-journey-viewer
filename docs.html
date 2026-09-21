@@ -5,122 +5,179 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Documentation · XCoordinated</title>
 <link rel="icon" type="image/png" href="assets/favicon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
 <style>
   :root {
     --bg: #0d0f12;
     --panel: #14181d;
     --panel-2: #1c222a;
-    --border: #2a323c;
+    --border: #262d35;
     --text: #e7ebee;
     --text-dim: #8b96a3;
     --text-faint: #5a6472;
-    --accent: #c7cdd6;
-    --human: #4da3ff;
+    --accent: #137E6D;
+    --accent-soft: rgba(19,126,109,.14);
+    --amber: #d9a441;
     --green: #34d399;
-    --red: #f87171;
-    --purple: #a78bfa;
-    --yellow: #fbbf24;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --display: 'Saira Condensed', sans-serif;
   }
   * { box-sizing: border-box; }
-  html, body { margin:0; background:var(--bg); color:var(--text); font-family: -apple-system, "Segoe UI", system-ui, sans-serif; }
-  a { color:var(--human); }
+  html, body { margin:0; background:var(--bg); color:var(--text); font-family:'Inter', -apple-system, "Segoe UI", system-ui, sans-serif; }
+  a { color:var(--text); }
+  ::selection { background:var(--accent-soft); color:var(--text); }
+  svg { display:block; }
 
+  /* ---------- Topbar ---------- */
   #topbar {
-    display:flex; align-items:center; justify-content:space-between; padding:14px 24px;
-    border-bottom:1px solid var(--border); position:sticky; top:0; background:rgba(13,15,18,.9); backdrop-filter:blur(8px); z-index:10;
+    display:flex; align-items:center; justify-content:space-between; padding:16px 28px;
+    border-bottom:1px solid var(--border); position:sticky; top:0; background:rgba(13,15,18,.88); backdrop-filter:blur(10px); z-index:10;
   }
-  #topbar .brand { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-dim); text-decoration:none; }
-  #topbar .brand img { width:20px; height:20px; }
-  #topbar .links { display:flex; gap:10px; }
-  #topbar .links a { font-size:13px; color:var(--text-dim); text-decoration:none; padding:6px 14px; border:1px solid var(--border); border-radius:100px; }
-  #topbar .links a:hover { color:var(--text); border-color:var(--accent); }
+  #topbar .brand { display:flex; align-items:baseline; gap:9px; text-decoration:none; }
+  #topbar .brand-mark { display:flex; align-items:center; gap:8px; }
+  #topbar .brand img { width:22px; height:22px; }
+  #topbar .brand span.name { font-family:var(--display); font-weight:800; font-size:18px; letter-spacing:.01em; color:var(--text); }
+  #topbar .brand span.path { font-family:var(--mono); font-size:11px; color:var(--accent); }
+  #topbar .links { display:flex; align-items:center; gap:18px; }
+  #topbar .links a { font-size:13px; color:var(--text-dim); text-decoration:none; }
+  #topbar .links a:hover { color:var(--text); }
+  #topbar .links .sep { color:var(--text-faint); font-size:12px; }
 
-  #layout { display:flex; max-width:1180px; margin:0 auto; align-items:flex-start; }
+  /* ---------- Layout: sidebar flush to the left edge, full height, right
+     below the topbar - not centered as part of a constrained wrapper (that
+     was what made it read as floating in the middle of the page). ---------- */
+  #layout { display:flex; align-items:stretch; min-height:calc(100vh - 57px); }
 
-  /* ---------- Sidebar ---------- */
-  #docSidebar { width:260px; flex-shrink:0; padding:28px 20px; position:sticky; top:57px; }
+  #docSidebar {
+    width:260px; flex-shrink:0; padding:28px 20px;
+    position:sticky; top:57px; height:calc(100vh - 57px); overflow-y:auto;
+  }
 
-  .profile-card { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:18px; margin-bottom:24px; }
-  .profile-card .name { font-size:14px; font-weight:600; margin:0 0 2px; }
-  .profile-card .role { font-size:12px; color:var(--text-faint); margin:0 0 14px; }
-  .profile-card .social { display:flex; gap:8px; }
-  .profile-card .social a, .profile-card .social span {
-    width:32px; height:32px; border-radius:8px; background:var(--panel-2); border:1px solid var(--border);
+  .profile-card { border-top:2px solid var(--accent); padding:16px 4px 20px; margin-bottom:22px; }
+  .profile-card .name { font-family:var(--display); font-size:17px; font-weight:700; margin:0 0 2px; }
+  .profile-card .role { font-size:11.5px; color:var(--text-faint); margin:0 0 14px; line-height:1.5; }
+  .profile-card .social { display:flex; gap:6px; }
+  .profile-card .social a {
+    width:28px; height:28px; border-radius:6px; border:1px solid var(--border);
     display:flex; align-items:center; justify-content:center; color:var(--text-dim); text-decoration:none;
+    transition:border-color .15s ease, color .15s ease;
   }
-  .profile-card .social a:hover { color:var(--text); border-color:var(--accent); }
-  .profile-card .social span { opacity:.35; cursor:default; }
+  .profile-card .social a:hover { color:var(--accent); border-color:var(--accent); }
 
   #docNav { display:flex; flex-direction:column; gap:2px; }
   #docNav > a.top-link {
-    display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:8px;
-    font-size:13px; font-weight:500; color:var(--text-dim); text-decoration:none;
+    display:flex; align-items:center; gap:9px; padding:8px 10px; border-radius:8px;
+    font-size:13.5px; font-weight:600; color:var(--text-dim); text-decoration:none;
   }
+  #docNav > a.top-link svg { width:15px; height:15px; opacity:.75; flex-shrink:0; }
   #docNav > a.top-link:hover { background:var(--panel); color:var(--text); }
-  #docNav > a.top-link.active { background:var(--panel); color:var(--text); }
-  #docNav > a.top-link svg, .nav-group > summary svg { flex-shrink:0; opacity:.8; }
+  #docNav > a.top-link.active { background:var(--accent-soft); color:var(--text); }
+  #docNav > a.top-link.active svg { opacity:1; color:var(--accent); }
 
-  .nav-group { margin-top:6px; }
+  .nav-group { margin-top:10px; }
   .nav-group summary {
-    display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:8px;
-    font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.04em;
+    display:flex; align-items:center; gap:9px; padding:8px 10px; border-radius:8px;
+    font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.05em;
     color:var(--text-faint); cursor:pointer; list-style:none; user-select:none;
   }
   .nav-group summary::-webkit-details-marker { display:none; }
-  .nav-group summary .chev { margin-left:auto; transition:transform .15s ease; opacity:.6; }
+  .nav-group summary svg.group-icon { width:14px; height:14px; opacity:.7; flex-shrink:0; }
+  .nav-group summary .chev { margin-left:auto; width:9px; height:9px; transition:transform .15s ease; opacity:.6; }
   .nav-group[open] summary .chev { transform:rotate(90deg); }
-  .nav-group summary:hover { background:var(--panel); color:var(--text-dim); }
+  .nav-group summary:hover { color:var(--text-dim); }
 
-  .nav-sub { display:flex; flex-direction:column; gap:1px; padding-left:20px; margin-top:2px; }
+  .nav-sub { display:flex; flex-direction:column; gap:1px; margin-top:2px; }
   .nav-sub a {
-    display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:8px;
-    font-size:13px; color:var(--text-dim); text-decoration:none; position:relative;
+    display:block; padding:7px 10px 7px 33px; border-radius:8px;
+    font-size:13px; color:var(--text-dim); text-decoration:none;
   }
-  .nav-sub a::before { content:""; width:4px; height:4px; border-radius:50%; background:var(--text-faint); flex-shrink:0; }
   .nav-sub a:hover { background:var(--panel); color:var(--text); }
-  .nav-sub a.active { background:var(--panel); color:var(--text); }
-  .nav-sub a.active::before { background:var(--human); }
+  .nav-sub a.active { background:var(--accent-soft); color:var(--text); font-weight:500; }
 
-  /* ---------- Main content ---------- */
-  main { flex:1; min-width:0; padding:36px 28px 80px; }
-  section { margin-bottom:56px; scroll-margin-top:76px; }
-  section h2 { font-size:22px; margin:0 0 4px; }
-  section > p.kicker { color:var(--text-faint); font-size:12px; text-transform:uppercase; letter-spacing:.08em; font-weight:600; margin:0 0 14px; }
-  section > p.lead { color:var(--text-dim); font-size:15px; line-height:1.7; max-width:680px; }
+  /* ---------- Main content: only the active tab's section is shown,
+     centered in the space next to the sidebar (not flush against it). ---------- */
+  main { flex:1; min-width:0; padding:44px 34px 100px; border-left:1px solid var(--border); }
+  main > section { display:none; }
+  main > section.section-active { display:block; max-width:700px; margin:0 auto; }
+  section h2 { font-family:var(--display); font-weight:800; font-size:26px; margin:0 0 8px; letter-spacing:.005em; }
+  section > p.kicker { color:var(--text-faint); font-size:12px; text-transform:uppercase; letter-spacing:.06em; font-weight:600; margin:0 0 14px; }
+  section > p.lead { color:var(--text-dim); font-size:15px; line-height:1.7; margin:0 0 6px; }
+  section > p.meta { color:var(--text-faint); font-size:12.5px; margin:10px 0 0; }
 
-  .card-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:18px; }
-  .info-card { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:18px; }
-  .info-card h3 { font-size:13px; margin:0 0 8px; display:flex; align-items:center; gap:8px; }
-  .info-card p { font-size:13px; color:var(--text-dim); margin:0; line-height:1.6; }
-  .info-card code { background:var(--panel-2); padding:1px 6px; border-radius:4px; font-size:12px; }
+  /* Panel: groups a section's body content into one bordered card, the way
+     each nav topic on the reference site groups its subsections - plain
+     stacked heading/paragraph pairs, no per-item borders or badges. */
+  .panel { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:24px 26px; margin-top:20px; }
+  .panel > *:first-child { margin-top:0 !important; }
+  .panel > *:last-child { margin-bottom:0 !important; }
 
-  table { width:100%; border-collapse:collapse; margin-top:16px; font-size:13px; }
-  th, td { text-align:left; padding:10px 12px; border-bottom:1px solid var(--border); color:var(--text-dim); }
-  th { color:var(--text-faint); font-weight:600; text-transform:uppercase; font-size:11px; letter-spacing:.05em; }
-  td strong { color:var(--text); }
+  .card-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:22px; }
+  .mini-card { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:18px 20px; }
+  .mini-card h3 { display:flex; align-items:center; gap:9px; font-size:13.5px; margin:0 0 8px; color:var(--text); font-weight:600; }
+  .mini-card h3 svg { width:15px; height:15px; color:var(--accent); flex-shrink:0; }
+  .mini-card p { font-size:13px; color:var(--text-dim); margin:0; line-height:1.6; }
 
-  ul.check-list { list-style:none; padding:0; margin:16px 0 0; display:grid; gap:8px; }
-  ul.check-list li { font-size:13px; color:var(--text-dim); padding-left:22px; position:relative; }
-  ul.check-list li::before { content:"✓"; position:absolute; left:0; color:var(--green); font-weight:700; }
+  table { width:100%; border-collapse:collapse; font-size:13.5px; }
+  th, td { text-align:left; padding:11px 14px 11px 0; border-bottom:1px solid var(--border); color:var(--text-dim); vertical-align:top; }
+  tr:last-child td { border-bottom:none; padding-bottom:2px; }
+  th { color:var(--text-faint); font-weight:600; text-transform:uppercase; font-size:11px; letter-spacing:.04em; }
+  td strong { color:var(--text); font-weight:600; }
+  td code { font-family:var(--mono); background:var(--panel-2); padding:1px 6px; border-radius:4px; font-size:12px; color:var(--text-dim); }
 
-  .callout { background:var(--panel); border:1px solid var(--border); border-left:3px solid var(--human); border-radius:8px; padding:14px 16px; margin-top:16px; font-size:13px; color:var(--text-dim); line-height:1.6; }
-  .callout strong { color:var(--text); }
+  /* Findings: a plain stacked list where a colored lead word does the job a
+     boxed badge would, without turning every line into its own little card. */
+  ul.finding-list { list-style:none; padding:0; margin:0; display:grid; gap:12px; }
+  ul.finding-list li { font-size:13.5px; color:var(--text-dim); line-height:1.65; }
+  ul.finding-list .lead-word { color:var(--accent); font-weight:600; }
+  ul.finding-list .lead-word.amber { color:var(--amber); }
 
-  pre { background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:14px 16px; overflow-x:auto; font-size:12px; color:var(--text-dim); line-height:1.6; }
+  ul.plain-list { list-style:none; padding:0; margin:0; display:grid; gap:12px; }
+  ul.plain-list li { font-size:13.5px; color:var(--text-dim); line-height:1.65; padding-left:15px; position:relative; }
+  ul.plain-list li::before { content:"–"; position:absolute; left:0; color:var(--text-faint); }
+
+  ol.step-list { list-style:none; counter-reset:step; padding:0; margin:0; display:grid; gap:12px; }
+  ol.step-list li { counter-increment:step; font-size:13.5px; color:var(--text-dim); line-height:1.65; padding-left:22px; position:relative; }
+  ol.step-list li::before { content:counter(step) "."; position:absolute; left:0; top:0; color:var(--text-faint); }
+
+  .callout { border-left:2px solid var(--accent); background:var(--panel); border-radius:0 8px 8px 0; padding:14px 18px; margin-top:16px; }
+  .callout .callout-label { font-size:11px; text-transform:uppercase; letter-spacing:.05em; font-weight:600; color:var(--accent); display:block; margin-bottom:6px; }
+  .callout p { font-size:13px; color:var(--text-dim); line-height:1.65; margin:0; }
+
+  pre {
+    background:var(--panel-2); border:1px solid var(--border); border-radius:8px; padding:16px 18px; overflow-x:auto;
+    font-family:var(--mono); font-size:12.5px; color:var(--text-dim); line-height:1.7;
+  }
+
+  /* Insights: same stacked heading+paragraph rhythm as the rest of the
+     panels - the stat lives in the sentence, not in its own oversized digit. */
+  .insight-row { display:flex; flex-direction:column; gap:20px; }
+  .insight h3 { margin:0 0 4px; font-size:14px; font-weight:600; color:var(--text); }
+  .insight h3 .stat { color:var(--accent); }
+  .insight p { margin:0; font-size:13.5px; color:var(--text-dim); line-height:1.65; }
 
   @media (max-width: 860px) {
     #layout { flex-direction:column; }
-    #docSidebar { width:100%; position:static; padding:20px; }
+    #docSidebar { width:100%; position:static; height:auto; padding:20px; }
     #docNav { flex-direction:row; flex-wrap:wrap; }
+    .nav-group { flex-basis:100%; }
+    main { border-left:none; border-top:1px solid var(--border); }
+    .card-grid-2 { grid-template-columns:1fr; }
   }
 </style>
 </head>
 <body>
 <div id="topbar">
-  <a class="brand" href="index.html"><img src="assets/lila-logo.png?v=2" alt="" /> XCoordinated Docs</a>
+  <a class="brand" href="index.html">
+    <span class="brand-mark"><img src="assets/lila-logo.png?v=2" alt="" /><span class="name">XCoordinated</span></span>
+    <span class="path">/docs</span>
+  </a>
   <div class="links">
     <a href="index.html">Home</a>
+    <span class="sep">·</span>
     <a href="viewer.html">Open Viewer</a>
+    <span class="sep">·</span>
     <a href="https://github.com/shreyahhh/lila-black-player-journey-viewer" target="_blank" rel="noopener">GitHub</a>
   </div>
 </div>
@@ -129,34 +186,34 @@
   <aside id="docSidebar">
     <div class="profile-card">
       <p class="name">Shreya</p>
-      <p class="role">Built for LILA Games · Product Engineer take-home</p>
+      <p class="role">Built for LILA Games<br>Product Engineer take-home</p>
       <div class="social">
         <a href="https://github.com/shreyahhh" target="_blank" rel="noopener" title="GitHub">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.84 9.73.5.1.68-.22.68-.49 0-.24-.01-.87-.01-1.71-2.78.62-3.37-1.37-3.37-1.37-.45-1.18-1.11-1.5-1.11-1.5-.91-.64.07-.63.07-.63 1 .07 1.53 1.06 1.53 1.06.89 1.56 2.34 1.11 2.91.85.09-.66.35-1.11.63-1.37-2.22-.26-4.56-1.14-4.56-5.07 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.31.1-2.72 0 0 .84-.27 2.75 1.05a9.3 9.3 0 0 1 5 0c1.91-1.32 2.75-1.05 2.75-1.05.55 1.41.2 2.46.1 2.72.64.72 1.03 1.63 1.03 2.75 0 3.94-2.34 4.8-4.57 5.06.36.32.68.94.68 1.9 0 1.37-.01 2.47-.01 2.81 0 .27.18.6.69.49A10.26 10.26 0 0 0 22 12.25C22 6.58 17.52 2 12 2z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.84 9.73.5.1.68-.22.68-.49 0-.24-.01-.87-.01-1.71-2.78.62-3.37-1.37-3.37-1.37-.45-1.18-1.11-1.5-1.11-1.5-.91-.64.07-.63.07-.63 1 .07 1.53 1.06 1.53 1.06.89 1.56 2.34 1.11 2.91.85.09-.66.35-1.11.63-1.37-2.22-.26-4.56-1.14-4.56-5.07 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.31.1-2.72 0 0 .84-.27 2.75 1.05a9.3 9.3 0 0 1 5 0c1.91-1.32 2.75-1.05 2.75-1.05.55 1.41.2 2.46.1 2.72.64.72 1.03 1.63 1.03 2.75 0 3.94-2.34 4.8-4.57 5.06.36.32.68.94.68 1.9 0 1.37-.01 2.47-.01 2.81 0 .27.18.6.69.49A10.26 10.26 0 0 0 22 12.25C22 6.58 17.52 2 12 2z"/></svg>
         </a>
         <a href="https://www.linkedin.com/in/shreya-ships-it/" target="_blank" rel="noopener" title="LinkedIn">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M6.94 5a2 2 0 1 1-4-.002 2 2 0 0 1 4 .002zM7 8.48H3V21h4V8.48zm6.32 0H9.34V21h3.94v-6.57c0-3.66 4.77-3.96 4.77 0V21H22v-7.93c0-6.17-7.06-5.94-8.68-2.91V8.48z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6.94 5a2 2 0 1 1-4-.002 2 2 0 0 1 4 .002zM7 8.48H3V21h4V8.48zm6.32 0H9.34V21h3.94v-6.57c0-3.66 4.77-3.96 4.77 0V21H22v-7.93c0-6.17-7.06-5.94-8.68-2.91V8.48z"/></svg>
         </a>
         <a href="https://shreya-portfolio-virid.vercel.app/" target="_blank" rel="noopener" title="Portfolio">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20z"/></svg>
         </a>
         <a href="mailto:shreyyaaa369@gmail.com" title="Email">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg>
         </a>
       </div>
     </div>
 
     <nav id="docNav">
       <a class="top-link" href="#overview">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
         Overview
       </a>
 
       <details class="nav-group" open>
         <summary>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+          <svg class="group-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
           Engineering
-          <svg class="chev" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 18 15 12 9 6"/></svg>
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 18 15 12 9 6"/></svg>
         </summary>
         <div class="nav-sub">
           <a href="#tech-stack">Tech Stack</a>
@@ -167,9 +224,9 @@
 
       <details class="nav-group" open>
         <summary>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <svg class="group-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           Product
-          <svg class="chev" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 18 15 12 9 6"/></svg>
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 18 15 12 9 6"/></svg>
         </summary>
         <div class="nav-sub">
           <a href="#product-decisions">Product Decisions</a>
@@ -182,16 +239,18 @@
 
   <main>
     <section id="overview">
-      <h2>XCoordinated</h2>
       <p class="kicker">LILA BLACK Player Journey Viewer</p>
-      <p class="lead">A browser-based tool for the Level Design team to explore how players actually move, fight, loot, and die across LILA BLACK's three maps, built from 5 days of real production telemetry (796 matches, 89,104 events).</p>
-      <div class="card-grid">
-        <div class="info-card">
-          <h3><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4a2 2 0 0 0 1-1.73Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg> The dataset</h3>
-          <p>1,243 Parquet files · 3 maps (AmbroseValley, GrandRift, Lockdown) · Feb 10–14 2026 · human &amp; bot players.</p>
+      <h2>XCoordinated</h2>
+      <p class="lead">A browser-based tool for the Level Design team to explore how players actually move, fight, loot, and die across LILA BLACK's three maps - built from 5 days of real production telemetry.</p>
+      <p class="meta">1,243 Parquet files · 796 matches · 89,104 events · 3 maps · 5 days (Feb 2026)</p>
+
+      <div class="card-grid-2">
+        <div class="mini-card">
+          <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4a2 2 0 0 0 1-1.73Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg> The dataset</h3>
+          <p>AmbroseValley, GrandRift, Lockdown - human and bot players, Feb 10–14 2026.</p>
         </div>
-        <div class="info-card">
-          <h3><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg> The goal</h3>
+        <div class="mini-card">
+          <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg> The goal</h3>
           <p>Turn raw telemetry into something a Level Designer can open and use: no queries, no notebooks.</p>
         </div>
       </div>
@@ -200,91 +259,129 @@
     <section id="tech-stack">
       <h2>Tech Stack</h2>
       <p class="lead">No framework, no build step: a static site is the whole product.</p>
-      <table>
-        <tr><th>Layer</th><th>Choice</th><th>Why</th></tr>
-        <tr><td><strong>Data parsing</strong></td><td><code>pyarrow</code></td><td>Native Parquet reader, no pandas overhead for a single pass per file</td></tr>
-        <tr><td><strong>Image metadata</strong></td><td><code>Pillow</code></td><td>Reads real minimap pixel dimensions (the README's stated 1024×1024 turned out to be wrong)</td></tr>
-        <tr><td><strong>Map rendering</strong></td><td>Leaflet + <code>L.CRS.Simple</code></td><td>The standard approach for plotting points on a static image instead of a real map</td></tr>
-        <tr><td><strong>Heatmaps</strong></td><td>Leaflet.heat</td><td>Drops directly into CRS.Simple's pixel coordinate space</td></tr>
-        <tr><td><strong>Hosting</strong></td><td>GitHub Pages</td><td>Zero-cost, zero-config for a static site with no backend</td></tr>
-      </table>
-      <div class="callout"><strong>Full comparison:</strong> alternatives considered (Streamlit, deck.gl, Kepler.gl, in-browser DuckDB parsing, Vercel/Netlify hosting) are written up in <a href="RESEARCH.md">RESEARCH.md</a> and the tradeoffs table in <a href="ARCHITECTURE.md">ARCHITECTURE.md</a>.</div>
+      <div class="panel">
+        <table>
+          <tr><th>Layer</th><th>Choice</th><th>Why</th></tr>
+          <tr><td><strong>Data parsing</strong></td><td><code>pyarrow</code></td><td>Native Parquet reader, no pandas overhead for a single pass per file</td></tr>
+          <tr><td><strong>Image metadata</strong></td><td><code>Pillow</code></td><td>Reads real minimap pixel dimensions (the README's stated 1024×1024 turned out to be wrong)</td></tr>
+          <tr><td><strong>Map rendering</strong></td><td>Leaflet + <code>L.CRS.Simple</code></td><td>The standard approach for plotting points on a static image instead of a real map</td></tr>
+          <tr><td><strong>Heatmaps</strong></td><td>Leaflet.heat</td><td>Drops directly into CRS.Simple's pixel coordinate space</td></tr>
+          <tr><td><strong>Hosting</strong></td><td>GitHub Pages</td><td>Zero-cost, zero-config for a static site with no backend</td></tr>
+        </table>
+      </div>
+      <div class="callout">
+        <span class="callout-label">See also</span>
+        <p>Alternatives considered (Streamlit, deck.gl, Kepler.gl, in-browser DuckDB parsing, Vercel/Netlify hosting) are written up in <a href="RESEARCH.md">RESEARCH.md</a>, with a tradeoffs table in <a href="ARCHITECTURE.md">ARCHITECTURE.md</a>.</p>
+      </div>
     </section>
 
     <section id="coordinate-mapping">
       <h2>Coordinate Mapping</h2>
       <p class="lead">The assignment's own README calls this "the tricky part." It was verified against the real dataset, not just implemented from the spec.</p>
-      <pre>u = (x - origin_x) / scale
+      <div class="panel">
+        <pre>u = (x - origin_x) / scale
 v = (z - origin_z) / scale
 pixel_x = u * image_width
 pixel_y = (1 - v) * image_height   // Y flip: world Z vs. image top-left origin</pre>
-      <ul class="check-list">
-        <li>100% of transformed points land inside image bounds, across all 89,104 rows and all 3 maps</li>
-        <li>Minimaps are <strong>not</strong> 1024×1024 as documented; real sizes read at runtime instead (4320×4320, 9000×9000, and a non-square 2160×2158)</li>
-        <li>Visually validated: paths trace roads and hug buildings correctly on every map</li>
-      </ul>
+        <ul class="finding-list" style="margin-top:18px;">
+          <li><span class="lead-word">Verified.</span> 100% of transformed points land inside image bounds, across all 89,104 rows and all 3 maps.</li>
+          <li><span class="lead-word amber">Found.</span> Minimaps are <strong>not</strong> 1024×1024 as documented - real sizes read at runtime instead (4320×4320, 9000×9000, and a non-square 2160×2158).</li>
+          <li><span class="lead-word">Verified.</span> Visually validated: paths trace roads and hug buildings correctly on every map.</li>
+        </ul>
+      </div>
     </section>
 
     <section id="data-pipeline">
       <h2>Data Pipeline</h2>
       <p class="lead">Everything risky happens once, offline, in Python: the browser only ever sees plain pixel coordinates and JSON.</p>
-      <pre>1,243 Parquet files (89,104 rows, 796 matches, 3 maps, 5 days)
+      <div class="panel">
+        <pre>1,243 Parquet files (89,104 rows, 796 matches, 3 maps, 5 days)
         │  pipeline/preprocess.py
         ▼
 796 match JSON files + index.json + 3 per-map _aggregate.json  (~6.6MB)
         │  viewer.html (fetch)
         ▼
 Rendered in-browser: paths, event markers, heatmaps, playback</pre>
-      <div class="callout">Also found: the <code>ts</code> column is typed <code>timestamp[ms]</code> but the raw values are actually Unix-epoch <strong>seconds</strong>. Decoding as milliseconds gives a nonsense 1970 date, while seconds land on real dates inside the dataset's actual Feb 2026 window. See <a href="ARCHITECTURE.md">ARCHITECTURE.md</a> for the full list of data nuances found.</div>
+      </div>
+      <div class="callout">
+        <span class="callout-label">Data quirk</span>
+        <p>The <code>ts</code> column is typed <code>timestamp[ms]</code>, but the raw values are actually Unix-epoch <strong>seconds</strong>. Decoding as milliseconds gives a nonsense 1970 date, while seconds land on real dates inside the dataset's actual Feb 2026 window. See <a href="ARCHITECTURE.md">ARCHITECTURE.md</a> for the full list of data nuances found.</p>
+      </div>
     </section>
 
     <section id="product-decisions">
       <h2>Product Decisions</h2>
       <p class="lead">Why the tool behaves the way it does.</p>
-      <ul class="check-list">
-        <li>Match dropdown sorted by player count: surfaces the busiest, most likely-interesting matches first</li>
-        <li>Heatmap defaults to "off": a heatmap over a path-covered map is noisy as a default view</li>
-        <li>Map-wide heatmaps are precomputed at build time, not fetched live: a single match has too few kill/death events to show a real pattern</li>
-        <li>Playback defaults to 2x: matches run up to ~15 minutes; real-time is tedious for a first look</li>
-      </ul>
+      <div class="panel">
+        <ul class="plain-list">
+          <li>Match dropdown sorted by player count: surfaces the busiest, most likely-interesting matches first</li>
+          <li>Heatmap defaults to "off": a heatmap over a path-covered map is noisy as a default view</li>
+          <li>Map-wide heatmaps are precomputed at build time, not fetched live: a single match has too few kill/death events to show a real pattern</li>
+          <li>Playback defaults to 2×: matches run up to ~15 minutes; real-time is tedious for a first look</li>
+        </ul>
+      </div>
     </section>
 
     <section id="insights">
       <h2>Data Insights</h2>
       <p class="lead">Three things the data revealed, each backed by a real stat. Full writeup in <a href="INSIGHTS.md">INSIGHTS.md</a>.</p>
-      <div class="card-grid">
-        <div class="info-card"><h3><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/></svg> Map rotation is skewed</h3><p>AmbroseValley: 71% of matches. GrandRift: just 7%, an order of magnitude less playtesting signal than the other maps.</p></div>
-        <div class="info-card"><h3><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" x2="19" y1="19" y2="13"/><line x1="16" x2="20" y1="16" y2="20"/><polyline points="9.5 6.5 21 18 21 21 18 21 6.5 9.5"/><line x1="5" x2="9" y1="14" y2="18"/><line x1="7" x2="4" y1="17" y2="20"/></svg> PvP is nearly absent</h3><p>Human-vs-human kills are ~0.1% of all combat events; almost all fighting is against bots.</p></div>
-        <div class="info-card"><h3><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 4H3"/><path d="M18 8H6"/><path d="M19 12H9"/><path d="M16 16h-6"/><path d="M11 20H9"/></svg> Storm rarely kills</h3><p>Only ~5% of matches have any storm death: the late-game pressure is coming from somewhere else.</p></div>
+      <div class="panel">
+        <div class="insight-row">
+          <div class="insight">
+            <h3>Map rotation is skewed <span class="stat">- 71% AmbroseValley</span></h3>
+            <p>AmbroseValley makes up 71% of matches. GrandRift is just 7% - an order of magnitude less playtesting signal than the other maps.</p>
+          </div>
+          <div class="insight">
+            <h3>PvP is nearly absent <span class="stat">- 0.1% of combat</span></h3>
+            <p>Human-vs-human kills are ~0.1% of all combat events; almost all fighting is against bots.</p>
+          </div>
+          <div class="insight">
+            <h3>Storm rarely kills <span class="stat">- 5% of matches</span></h3>
+            <p>Only ~5% of matches have any storm death - the late-game pressure is coming from somewhere else.</p>
+          </div>
+        </div>
       </div>
     </section>
 
     <section id="roadmap">
-      <h2>Roadmap: if this became a permanent tool</h2>
+      <h2>Roadmap</h2>
       <p class="lead">This was scoped correctly for a fixed 5-day data snapshot. Full production considerations (data freshness, access control, observability) are in <a href="DOCS.md">DOCS.md</a>. Near-term next steps:</p>
-      <ul class="check-list">
-        <li>Automated pipeline validation (assert points stay in bounds, human/bot counts reconcile) so a future data refresh can't silently break coordinate mapping</li>
-        <li>Point the insights at exact map locations now that the heatmap is live</li>
-        <li>Per-(map, date) aggregate heatmaps, if "has traffic changed over the 5 days" becomes a real question</li>
-      </ul>
+      <div class="panel">
+        <ol class="step-list">
+          <li>Automated pipeline validation (assert points stay in bounds, human/bot counts reconcile) so a future data refresh can't silently break coordinate mapping</li>
+          <li>Point the insights at exact map locations now that the heatmap is live</li>
+          <li>Per-(map, date) aggregate heatmaps, if "has traffic changed over the 5 days" becomes a real question</li>
+        </ol>
+      </div>
     </section>
   </main>
 </div>
 
 <script>
-  // Scroll-spy: highlight the nav item for whichever section is currently in view.
-  const navLinks = Array.from(document.querySelectorAll('#docNav a'));
-  const sections = navLinks.map(a => document.querySelector(a.getAttribute('href')));
+  // Tabs: clicking a sidebar item shows only that section's content (like the
+  // reference site) instead of scrolling a single long page.
+  const navLinks = Array.from(document.querySelectorAll('#docNav a[href^="#"]'));
+  const sections = Array.from(document.querySelectorAll('main > section'));
 
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (!entry.isIntersecting) return;
-      const id = '#' + entry.target.id;
-      navLinks.forEach(a => a.classList.toggle('active', a.getAttribute('href') === id));
+  function activate(id) {
+    sections.forEach(s => s.classList.toggle('section-active', '#' + s.id === id));
+    navLinks.forEach(a => a.classList.toggle('active', a.getAttribute('href') === id));
+  }
+
+  navLinks.forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      const id = a.getAttribute('href');
+      if (id === location.hash) return;
+      history.replaceState(null, '', id);
+      activate(id);
+      document.getElementById('docSidebar').scrollTo({ top: 0 });
+      window.scrollTo({ top: 0 });
     });
-  }, { rootMargin: '-15% 0px -70% 0px' });
+  });
 
-  sections.forEach(s => s && observer.observe(s));
+  const initial = sections.some(s => '#' + s.id === location.hash) ? location.hash : '#overview';
+  activate(initial);
 </script>
 </body>
 </html>

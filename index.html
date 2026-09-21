@@ -64,6 +64,20 @@
     z-index:0; pointer-events:none;
   }
 
+  /* Loot/gear accent, bottom-left — same treatment as #mapCorner: a
+     transparent-background PNG faded with a mask so it reads as a background
+     accent, not a pasted-on sticker. The source image's own content already
+     clusters toward its bottom-left, so it's anchored there instead of
+     centered. */
+  #gearCorner {
+    position:absolute; bottom:-24px; left:-24px; width:min(30vw, 440px); aspect-ratio:683/365;
+    background: url("assets/stuff-removebg-preview.png") left bottom / contain no-repeat;
+    opacity:.5;
+    -webkit-mask-image: radial-gradient(circle at 25% 80%, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 88%);
+    mask-image: radial-gradient(circle at 25% 80%, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 88%);
+    z-index:0; pointer-events:none;
+  }
+
   nav { position:absolute; top:24px; left:32px; display:flex; align-items:center; gap:12px; z-index:2; }
   nav img { width:44px; height:44px; }
   nav span { font-family:'Saira Condensed', sans-serif; font-weight:800; font-size:23px; letter-spacing:.01em; color:var(--text); }
@@ -156,6 +170,7 @@
   <span class="geo-tick lon" style="left:52%">73.2810° W</span>
   <span class="geo-tick lon" style="left:80%">72.9440° W</span>
   <div id="mapCorner"></div>
+  <div id="gearCorner"></div>
   <nav>
     <img src="assets/lila-logo.png?v=2" alt="LILA Games" />
     <span>XCoordinated</span>
