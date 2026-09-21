@@ -112,6 +112,8 @@
   .panel { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:24px 26px; margin-top:20px; }
   .panel > *:first-child { margin-top:0 !important; }
   .panel > *:last-child { margin-bottom:0 !important; }
+  .panel h4 { font-size:12px; font-weight:700; color:var(--text-faint); text-transform:uppercase; letter-spacing:.05em; margin:22px 0 8px; }
+  .panel > p { font-size:13px; color:var(--text-dim); line-height:1.6; margin:10px 0 0; }
 
   .card-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:22px; }
   .mini-card { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:18px 20px; }
@@ -164,6 +166,11 @@
     .nav-group { flex-basis:100%; }
     main { border-left:none; border-top:1px solid var(--border); }
     .card-grid-2 { grid-template-columns:1fr; }
+  }
+
+  @media (max-width: 480px) {
+    #topbar { flex-wrap:wrap; row-gap:8px; padding:14px 18px; }
+    #topbar .links { gap:12px; }
   }
 </style>
 </head>
@@ -219,6 +226,9 @@
           <a href="#tech-stack">Tech Stack</a>
           <a href="#coordinate-mapping">Coordinate Mapping</a>
           <a href="#data-pipeline">Data Pipeline</a>
+          <a href="#assumptions">Assumptions &amp; Data Issues</a>
+          <a href="#tradeoffs">Tradeoffs</a>
+          <a href="#getting-started">Getting Started</a>
         </div>
       </details>
 
@@ -229,8 +239,10 @@
           <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 18 15 12 9 6"/></svg>
         </summary>
         <div class="nav-sub">
+          <a href="#scope">Scope</a>
           <a href="#product-decisions">Product Decisions</a>
           <a href="#insights">Data Insights</a>
+          <a href="#production">Production Considerations</a>
           <a href="#roadmap">Roadmap</a>
         </div>
       </details>
@@ -271,7 +283,7 @@
       </div>
       <div class="callout">
         <span class="callout-label">See also</span>
-        <p>Alternatives considered (Streamlit, deck.gl, Kepler.gl, in-browser DuckDB parsing, Vercel/Netlify hosting) are written up in <a href="RESEARCH.md">RESEARCH.md</a>, with a tradeoffs table in <a href="ARCHITECTURE.md">ARCHITECTURE.md</a>.</p>
+        <p>The full alternatives survey (Streamlit, deck.gl, Kepler.gl, in-browser DuckDB parsing, Vercel/Netlify hosting) is in <a href="RESEARCH.md">RESEARCH.md</a> - the decisions that came out of it are on the <a href="#tradeoffs">Tradeoffs</a> page.</p>
       </div>
     </section>
 
@@ -305,7 +317,88 @@ Rendered in-browser: paths, event markers, heatmaps, playback</pre>
       </div>
       <div class="callout">
         <span class="callout-label">Data quirk</span>
-        <p>The <code>ts</code> column is typed <code>timestamp[ms]</code>, but the raw values are actually Unix-epoch <strong>seconds</strong>. Decoding as milliseconds gives a nonsense 1970 date, while seconds land on real dates inside the dataset's actual Feb 2026 window. See <a href="ARCHITECTURE.md">ARCHITECTURE.md</a> for the full list of data nuances found.</p>
+        <p>The <code>ts</code> column is typed <code>timestamp[ms]</code>, but the raw values are actually Unix-epoch <strong>seconds</strong>. Decoding as milliseconds gives a nonsense 1970 date, while seconds land on real dates inside the dataset's actual Feb 2026 window. Full list of nuances found is on the <a href="#assumptions">Assumptions &amp; Data Issues</a> page.</p>
+      </div>
+    </section>
+
+    <section id="assumptions">
+      <h2>Assumptions &amp; Data Issues</h2>
+      <p class="lead">Every real gotcha found in the raw dataset, and exactly how it was handled - not just the one called out on the Data Pipeline page.</p>
+      <div class="panel">
+        <table>
+          <tr><th>Issue</th><th>What was found</th><th>How handled</th></tr>
+          <tr><td><strong>Minimap size</strong></td><td>README says 1024×1024; real files are far larger, and GrandRift isn't even square</td><td>Read actual image dimensions at runtime with Pillow, never hardcode 1024</td></tr>
+          <tr><td><strong><code>ts</code> column</strong></td><td>Typed <code>timestamp[ms]</code>, README calls it "match-relative" - neither is right. The raw int64, decoded as epoch <strong>seconds</strong>, lands on real Feb 2026 dates; decoded as milliseconds it lands on 1970</td><td>Read the raw int64 as epoch seconds, then convert to match-relative seconds for playback</td></tr>
+          <tr><td><strong>Human/bot detection</strong></td><td>Event name (<code>Position</code> vs. <code>BotPosition</code>) is unreliable - bot IDs were found emitting plain <code>Position</code>/<code>Loot</code> events</td><td>Classify strictly by <code>user_id</code> format (UUID vs. numeric), ignore event-name prefixes</td></tr>
+          <tr><td><strong>Multiple maps per match</strong></td><td>Verified 0 matches reference more than one <code>map_id</code></td><td>Grouping by <code>match_id</code> alone is safe - no special handling needed</td></tr>
+          <tr><td><strong>Missing/garbled rows</strong></td><td>0 nulls, 0 NaN/Inf across all 89,104 rows; all 1,243 files parsed without error</td><td>No filtering/cleanup step needed beyond decoding <code>event</code> bytes</td></tr>
+          <tr><td><strong>Sparse player files</strong></td><td>4 matches have a player file with only 2 rows total - real telemetry gaps, not corrupt data</td><td>Rendered as-is; a future dataset with larger gaps would need a "teleport" gap-detection heuristic</td></tr>
+          <tr><td><strong>Events with no matching file</strong></td><td>Some matches reference an actor (e.g. a <code>BotKilled</code>) with no position file present for it in that match</td><td>Only renders players/bots with an explicit position file - never fabricates a path for data that doesn't exist</td></tr>
+        </table>
+      </div>
+    </section>
+
+    <section id="tradeoffs">
+      <h2>Tradeoffs</h2>
+      <p class="lead">Every major decision, and the alternative it was weighed against.</p>
+      <div class="panel">
+        <table>
+          <tr><th>Decision</th><th>Alternative considered</th><th>Why this way</th></tr>
+          <tr><td><strong>Preprocess to static JSON, no backend</strong></td><td>In-browser Parquet parsing (DuckDB-Wasm)</td><td>Isolates the risky coordinate/ts/bot-detection logic in one debuggable script; keeps the frontend trivially simple and hosting free</td></tr>
+          <tr><td><strong>Leaflet + <code>CRS.Simple</code></strong></td><td>deck.gl</td><td>Lighter-weight, most direct precedent for this exact problem; deck.gl's WebGL headroom isn't needed at this data scale (&le; a few thousand points/match)</td></tr>
+          <tr><td><strong>One JSON file per match</strong></td><td>One giant JSON for all matches</td><td>Keeps initial page load small - a Level Designer only ever looks at one match at a time</td></tr>
+          <tr><td><strong>Precompute per-map aggregate heat points</strong></td><td>Fetch and concatenate all per-match files client-side</td><td>A single match has too few points for a meaningful zone; precomputing once avoids downloading hundreds of files (AmbroseValley alone has 566 matches)</td></tr>
+        </table>
+      </div>
+    </section>
+
+    <section id="getting-started">
+      <h2>Getting Started</h2>
+      <p class="lead">Everything needed to run this locally or regenerate the data from scratch.</p>
+      <div class="panel">
+        <h4>Setup</h4>
+        <pre>python -m venv .venv
+source .venv/bin/activate      # Windows: .venv\Scripts\activate
+pip install pyarrow pillow
+
+# Regenerate data/ from the raw parquet files
+cd pipeline
+python preprocess.py --src "&lt;path to player_data/player_data&gt;" --out "../data"</pre>
+        <h4>Running locally</h4>
+        <pre># from the repo root
+python -m http.server 8000
+# http://localhost:8000/            -&gt; landing page
+# http://localhost:8000/viewer.html -&gt; the tool directly
+# http://localhost:8000/docs.html   -&gt; documentation</pre>
+        <p>A plain <code>file://</code> open won't work - the viewer <code>fetch()</code>s JSON, which needs to be served over HTTP.</p>
+      </div>
+      <div class="callout">
+        <span class="callout-label">Deploying</span>
+        <p>100% static - drag the repo root onto Vercel/Netlify, or serve via GitHub Pages (Settings → Pages → deploy from <code>main</code> / root). No build step, no environment variables, no config.</p>
+      </div>
+    </section>
+
+    <section id="scope">
+      <h2>Scope</h2>
+      <p class="lead">LILA Games' Level Design team has raw player telemetry but no visual way to answer basic design questions - where players fight, where they die to the storm, which parts of a map never get visited.</p>
+      <div class="card-grid-2">
+        <div class="mini-card">
+          <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a6.5 6.5 0 0 1 13 0"/></svg> The user</h3>
+          <p>A Level Designer - not a data scientist. They think in terms of "this building," "that choke point," not <code>x=1099.5, z=2963.8</code>.</p>
+        </div>
+        <div class="mini-card">
+          <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> The job</h3>
+          <p>Open a match, watch it play out on the real map art, and spot patterns - in one match, or across hundreds.</p>
+        </div>
+      </div>
+      <div class="panel">
+        <h4>Non-goals for this pass</h4>
+        <ul class="plain-list">
+          <li>Real-time/live telemetry: this is a historical-data explorer, not a live dashboard</li>
+          <li>Cross-map or cross-day comparison views (e.g. AmbroseValley vs. Lockdown side by side)</li>
+          <li>Authentication/access control: <code>user_id</code> is an opaque UUID/bot-id with no PII, so an open link is fine for this exercise</li>
+          <li>Editing or annotating the data from the tool - it's a read-only viewer</li>
+        </ul>
       </div>
     </section>
 
@@ -318,39 +411,61 @@ Rendered in-browser: paths, event markers, heatmaps, playback</pre>
           <li>Heatmap defaults to "off": a heatmap over a path-covered map is noisy as a default view</li>
           <li>Map-wide heatmaps are precomputed at build time, not fetched live: a single match has too few kill/death events to show a real pattern</li>
           <li>Playback defaults to 2×: matches run up to ~15 minutes; real-time is tedious for a first look</li>
+          <li>No login, no per-user state: nothing in the requirements calls for it over already-anonymized data</li>
         </ul>
       </div>
     </section>
 
     <section id="insights">
       <h2>Data Insights</h2>
-      <p class="lead">Three things the data revealed, each backed by a real stat. Full writeup in <a href="INSIGHTS.md">INSIGHTS.md</a>.</p>
+      <p class="lead">Four things the data revealed, each backed by a real stat and an actionable read for the design team. Full writeup in <a href="INSIGHTS.md">INSIGHTS.md</a>.</p>
       <div class="panel">
         <div class="insight-row">
           <div class="insight">
-            <h3>Map rotation is skewed <span class="stat">- 71% AmbroseValley</span></h3>
-            <p>AmbroseValley makes up 71% of matches. GrandRift is just 7% - an order of magnitude less playtesting signal than the other maps.</p>
+            <h3>Map rotation is heavily skewed <span class="stat">- 71% AmbroseValley</span></h3>
+            <p>566 of 796 matches (71%) are on AmbroseValley; Lockdown gets 171 (21%); GrandRift just 59 (7%) - an order of magnitude less playtesting signal than the other two. If rotation is meant to be roughly even, this is worth a look at matchmaking weight config.</p>
           </div>
           <div class="insight">
-            <h3>PvP is nearly absent <span class="stat">- 0.1% of combat</span></h3>
-            <p>Human-vs-human kills are ~0.1% of all combat events; almost all fighting is against bots.</p>
+            <h3>PvP is nearly absent <span class="stat">- ~0.1% of combat</span></h3>
+            <p>Only 3 human-on-human kills across all 796 matches, vs. 2,415 bot kills - holds per-map too. If human PvP tension is meant to be part of the appeal, players are almost never actually encountering each other.</p>
           </div>
           <div class="insight">
-            <h3>Storm rarely kills <span class="stat">- 5% of matches</span></h3>
-            <p>Only ~5% of matches have any storm death - the late-game pressure is coming from somewhere else.</p>
+            <h3>Storm rarely kills <span class="stat">- ~5% of matches</span></h3>
+            <p>39 storm deaths total. Lockdown's rate (~10%) is roughly double AmbroseValley's (~3%) despite being the smaller, closer-quarters map - if storm pressure should be a bigger late-match forcing function, Lockdown is the one to tighten first.</p>
+          </div>
+          <div class="insight">
+            <h3>Loot density is lower on Lockdown <span class="stat">- ~12 vs. ~15-18/match</span></h3>
+            <p>Lockdown averages ~12 loot pickups/match vs. ~17.6 on AmbroseValley and ~14.9 on GrandRift, despite similar match durations (~400-430s) - worth checking loot spawn density with the heatmap now that it's live.</p>
           </div>
         </div>
       </div>
     </section>
 
+    <section id="production">
+      <h2>Production Considerations</h2>
+      <p class="lead">This was built as a static, read-only tool over a fixed data snapshot - the right scope for the assignment, not how a permanent tool would be built. What changes if LILA Games kept this running against live data:</p>
+      <div class="panel">
+        <table>
+          <tr><th>Concern</th><th>Current approach</th><th>In production</th></tr>
+          <tr><td><strong>Data freshness</strong></td><td>One-time snapshot &rarr; static JSON</td><td>A scheduled ingestion job re-running the same pipeline against new match data</td></tr>
+          <tr><td><strong>Data volume</strong></td><td>6.6MB total, fits in a git repo</td><td>A real datastore (Postgres/DuckDB) + pagination instead of one <code>index.json</code> listing every match</td></tr>
+          <tr><td><strong>Hosting</strong></td><td>GitHub Pages (free, rebuilds need a commit)</td><td>Any standard static host behind the company's auth, likely SSO-gated</td></tr>
+          <tr><td><strong>Access control</strong></td><td>None - no PII in the data</td><td>SSO-gated access if tied to real accounts in the future</td></tr>
+          <tr><td><strong>Schema drift</strong></td><td>Hardcoded per-map scale/origin, validated once</td><td>Pipeline should validate its own assumptions on every run (see Roadmap)</td></tr>
+          <tr><td><strong>Observability</strong></td><td>None - offline script, run manually</td><td>Ingestion failures should alert someone rather than fail silently</td></tr>
+        </table>
+      </div>
+    </section>
+
     <section id="roadmap">
       <h2>Roadmap</h2>
-      <p class="lead">This was scoped correctly for a fixed 5-day data snapshot. Full production considerations (data freshness, access control, observability) are in <a href="DOCS.md">DOCS.md</a>. Near-term next steps:</p>
+      <p class="lead">This was scoped correctly for a fixed 5-day data snapshot. Full <a href="#production">production considerations</a> are covered separately. Near-term next steps:</p>
       <div class="panel">
         <ol class="step-list">
           <li>Automated pipeline validation (assert points stay in bounds, human/bot counts reconcile) so a future data refresh can't silently break coordinate mapping</li>
           <li>Point the insights at exact map locations now that the heatmap is live</li>
           <li>Per-(map, date) aggregate heatmaps, if "has traffic changed over the 5 days" becomes a real question</li>
+          <li>Minimap image compression: Lockdown's JPG and AmbroseValley's PNG are several MB at full resolution - fine here, but worth a build-time downscale pass if load time on a slow connection becomes a concern</li>
         </ol>
       </div>
     </section>
@@ -358,30 +473,35 @@ Rendered in-browser: paths, event markers, heatmaps, playback</pre>
 </div>
 
 <script>
-  // Tabs: clicking a sidebar item shows only that section's content (like the
-  // reference site) instead of scrolling a single long page.
+  // Tabs: clicking a sidebar item (or an in-content cross-link to another
+  // tab, e.g. "see Tradeoffs") shows only that section's content instead of
+  // scrolling a single long page. Delegated on the document so any same-page
+  // anchor link works, not just the ones in the sidebar.
   const navLinks = Array.from(document.querySelectorAll('#docNav a[href^="#"]'));
   const sections = Array.from(document.querySelectorAll('main > section'));
 
   function activate(id) {
     sections.forEach(s => s.classList.toggle('section-active', '#' + s.id === id));
     navLinks.forEach(a => a.classList.toggle('active', a.getAttribute('href') === id));
+    document.getElementById('docSidebar').scrollTo({ top: 0 });
+    window.scrollTo({ top: 0 });
   }
 
-  navLinks.forEach(a => {
-    a.addEventListener('click', e => {
-      e.preventDefault();
-      const id = a.getAttribute('href');
-      if (id === location.hash) return;
-      history.replaceState(null, '', id);
-      activate(id);
-      document.getElementById('docSidebar').scrollTo({ top: 0 });
-      window.scrollTo({ top: 0 });
-    });
+  document.addEventListener('click', e => {
+    const a = e.target.closest('a[href^="#"]');
+    if (!a) return;
+    const id = a.getAttribute('href');
+    if (!sections.some(s => '#' + s.id === id)) return; // not a tab, e.g. a plain "#" link
+    e.preventDefault();
+    if (id !== location.hash) history.pushState(null, '', id);
+    activate(id);
   });
 
-  const initial = sections.some(s => '#' + s.id === location.hash) ? location.hash : '#overview';
-  activate(initial);
+  window.addEventListener('popstate', () => {
+    activate(sections.some(s => '#' + s.id === location.hash) ? location.hash : '#overview');
+  });
+
+  activate(sections.some(s => '#' + s.id === location.hash) ? location.hash : '#overview');
 </script>
 </body>
 </html>

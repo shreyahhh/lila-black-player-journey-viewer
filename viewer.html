@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>XCoordinated · LILA BLACK Player Journey Viewer</title>
 <link rel="icon" type="image/png" href="assets/favicon.png" />
+<!-- Minimaps are large (up to ~12MB); kick off the default map's image fetch
+     immediately, in parallel with the JS/data fetches below, instead of
+     waiting for index.json + dropdown population to finish first. -->
+<link rel="preload" as="image" href="minimaps/AmbroseValley_Minimap.png" fetchpriority="high" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
@@ -369,6 +373,14 @@ function fitMapCover(imgWidth, imgHeight) {
   leafletMap.setView([imgHeight / 2, imgWidth / 2], zoom, { animate: false });
 }
 
+let currentImageReady = Promise.resolve();
+
+// Returns a promise that resolves once the map's minimap image has actually
+// finished loading — not just once Leaflet's synchronous setup has run.
+// These images are large (up to ~12MB), so without this, the loading
+// indicator/entrance animation used to finish based on the (much smaller,
+// much faster) match JSON fetch, making the UI look "ready" while the map
+// image was often still loading in behind it.
 function initMapView(map_id, dims) {
   const { width, height } = dims;
   const bounds = [[0, 0], [height, width]];
@@ -378,12 +390,12 @@ function initMapView(map_id, dims) {
     // the Leaflet instance (destroying it mid zoom-animation throws).
     fitMapCover(width, height);
     currentImgDims = dims;
-    return;
+    return currentImageReady;
   }
 
   if (leafletMap) leafletMap.remove();
   leafletMap = L.map("map", { crs: L.CRS.Simple, minZoom: -8, zoomSnap: 0, zoomDelta: 0.5, zoomAnimation: false, attributionControl: false });
-  L.imageOverlay(`minimaps/${map_id}_Minimap${mapImageExt(map_id)}`, bounds).addTo(leafletMap);
+  const overlay = L.imageOverlay(`minimaps/${map_id}_Minimap${mapImageExt(map_id)}`, bounds).addTo(leafletMap);
   fitMapCover(width, height);
   // Re-cover on every resize (window resize, or the sidebar's own layout
   // changing) instead of leaving the old zoom/crop in place, which is what
@@ -391,6 +403,13 @@ function initMapView(map_id, dims) {
   leafletMap.on("resize", () => fitMapCover(width, height));
   currentImgDims = dims;
   currentMapId = map_id;
+
+  currentImageReady = new Promise(resolve => {
+    const el = overlay.getElement();
+    if (el && el.complete) { resolve(); return; } // already cached/loaded
+    overlay.once("load", resolve);
+  });
+  return currentImageReady;
 }
 
 function mapImageExt(map_id) {
@@ -404,12 +423,10 @@ function clearLayers() {
 }
 
 async function loadMatch(mapId, file) {
-  showLoading("Loading match…");
   const res = await fetch(`${DATA_BASE}/${file}`);
   const match = await res.json();
   currentMatch = match;
   renderMatch(match);
-  hideLoading();
 }
 
 function renderMatch(match) {
@@ -594,8 +611,10 @@ async function selectMatch() {
   const mapId = document.getElementById("mapSelect").value;
   const file = document.getElementById("matchSelect").value;
   if (!file) return;
-  initMapView(mapId, INDEX.maps[mapId]);
-  await loadMatch(mapId, file);
+  showLoading("Loading map…");
+  const imageReady = initMapView(mapId, INDEX.maps[mapId]);
+  await Promise.all([loadMatch(mapId, file), imageReady]);
+  hideLoading();
 }
 
 document.getElementById("mapSelect").addEventListener("change", refreshDates);
